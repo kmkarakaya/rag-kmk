@@ -12,4 +12,7 @@ def info():
     print("This is the common module.")
     print("It contains common functions and classes used by the other modules.")
 
-    
+def get_version():
+    """Returns the version of the module.
+    """
+    return "1.0.2"    
