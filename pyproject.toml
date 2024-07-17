@@ -4,7 +4,7 @@ version = "0.0.2"
 dynamic = [
     "dependencies",
 ]
-description = "A simple RAG implemetation for educational purposes implemented by Murat Karakaya Akademi"
+description = "A simple RAG implementation for educational purposes implemented by Murat Karakaya Akademi"
 readme = "README.md"
 requires-python = ">=3.8"
 keywords = [

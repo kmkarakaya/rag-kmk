@@ -4,7 +4,7 @@
 [![image](https://img.shields.io/pypi/v/rag_kmk.svg)](https://pypi.python.org/pypi/rag_kmk)
 
 
-**A simple RAG implemetation for educational purposes implemented by Murat Karakaya Akademi**
+**A simple RAG implementation for educational purposes implemented by Murat Karakaya Akademi**
 
 
 -   Free software: MIT License
