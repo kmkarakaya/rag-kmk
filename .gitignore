@@ -105,3 +105,6 @@ ENV/
 
 # IDE settings
 .vscode/
+
+# github commands
+github_commands.md 
