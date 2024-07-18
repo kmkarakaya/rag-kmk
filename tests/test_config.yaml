@@ -1,0 +1,47 @@
+# Vector Database Configuration
+vector_db:
+  type: "chromadb"
+  settings:
+    persist_directory: "./test_chroma_db"
+    collection_name: "test_rag_collection"
+
+# LLM Configuration
+llm:
+  type: "gemini"
+  model: "gemini-pro"
+  settings:
+    temperature: 0.5
+    max_output_tokens: 512
+
+# Knowledge Base Configuration
+knowledge_base:
+  chunk_size: 500
+  chunk_overlap: 100
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+
+# RAG Query Configuration
+rag:
+  num_chunks_to_retrieve: 3
+  similarity_threshold: 0.6
+
+# API Keys (Use dummy keys for testing)
+api_keys:
+  google_ai: "TEST_API_KEY"
+
+# Logging Configuration
+logging:
+  level: "DEBUG"
+  file: "logs/test_rag_kmk.log"
+
+# Supported File Types
+supported_file_types:
+  - ".txt"
+  - ".pdf"
+  - ".docx"
+
+# Test-specific configurations
+test:
+  sample_documents_dir: "./tests/sample_documents"
+  max_test_documents: 5
+  mock_responses:
+    llm_response: "This is a mock LLM response for testing purposes."
