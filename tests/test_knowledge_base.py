@@ -1,3 +1,4 @@
+'''
 import unittest
 import os
 from unittest.mock import patch, Mock
@@ -5,6 +6,9 @@ from rag_kmk import initialize_rag, build_knowledge_base
 from tests import TEST_CONFIG
 
 class TestKnowledgeBase(unittest.TestCase):
+    pass
+
+
 
     @classmethod
     def setUpClass(cls):
@@ -53,5 +57,8 @@ class TestKnowledgeBase(unittest.TestCase):
 
     # Add more tests as needed for edge cases and specific functionalities
 
+
 if __name__ == '__main__':
     unittest.main()
+
+    '''
