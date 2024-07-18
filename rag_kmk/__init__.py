@@ -4,5 +4,5 @@ from .common import hello_world, info, get_version
 
 __author__ = """Murat Karakaya"""
 __email__ = "kmkarakaya@gmail.com"
-__version__ = "0.0.7"
+__version__ = "0.0.8"
 __all__ = ['hello_world', 'info', 'get_version']
