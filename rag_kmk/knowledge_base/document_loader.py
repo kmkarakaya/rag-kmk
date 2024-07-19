@@ -1,7 +1,7 @@
 import os
 from rag_kmk.utils import load_config, setup_logger, is_supported_file_type, clean_text
 
-#
+# test
 
 def load_documents(file_list):
     # Load the documents from the files in the file list
