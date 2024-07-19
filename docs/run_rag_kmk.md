@@ -1,4 +1,4 @@
  
-# rag_kmk module
+# run_rag_kmk module
 
 ::: rag_kmk.run_rag_kmk
