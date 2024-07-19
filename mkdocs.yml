@@ -82,5 +82,5 @@ nav:
     - Examples:
         - examples/intro.ipynb
     - API Reference:
-          - rag_kmk module: rag_kmk.md
+          - run_rag_kmk module: run_rag_kmk.md
           - common module: common.md
