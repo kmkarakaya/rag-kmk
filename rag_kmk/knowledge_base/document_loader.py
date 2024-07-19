@@ -1,40 +1,54 @@
 import os
-from rag_kmk.utils import load_config, setup_logger, is_supported_file_type, clean_text
+import fitz  # PyMuPDF
+from rag_kmk import CONFIG
+from rag_kmk.utils.logging_utils import setup_logger
+from docx import Document  # python-docx
 
-# test
+def load_documents(directory_path):
+    """
+    Loads documents from a specified directory. Supported file types are defined in CONFIG['supported_file_types'].
+    Currently supports .txt, .pdf, and .docx files.
 
-def load_documents(file_list):
-    '''
-      Load the documents from the files in the file list
-    '''
-    config = load_config()  # Load the configuration
-    logger = setup_logger('document_loader', config['logging']['file'])
-    
-    supported_file_types = config['supported_file_types']
-    max_file_size = config.get('knowledge_base', {}).get('max_file_size', 10 * 1024 * 1024)  # Default 10MB if not specified
-    
+    Parameters:
+    - directory_path (str): The path to the directory containing the documents to be loaded.
+
+    Returns:
+    - list: A list of document contents as strings.
+    """
+    # Initialize the logger
+    logger = setup_logger('document_loader', 'rag-kmk\\rag_kmk\\logs\\document_loader.log')
     documents = []
-    for file in file_list:
-        if is_supported_file_type(file, supported_file_types):
+
+    if not os.path.isdir(directory_path):
+        logger.error(f'{directory_path} is not a directory.')
+        return documents
+
+    for filename in os.listdir(directory_path):
+        file_path = os.path.join(directory_path, filename)
+        file_extension = os.path.splitext(filename)[1]
+
+        if file_extension in CONFIG['supported_file_types']:
             try:
-                file_size = os.path.getsize(file)
-                if file_size > max_file_size:
-                    logger.warning(f"File {file} exceeds maximum size limit. Skipping.")
-                    continue
-                
-                # Load the file
-                with open(file, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                
-                cleaned_content = clean_text(content)
-                documents.append(cleaned_content)
-                logger.info(f"Successfully loaded and cleaned: {file}")
+                if file_extension == '.txt':
+                    with open(file_path, 'r') as file:
+                        document = file.read()
+                        documents.append(document)
+                        logger.info(f'Text document loaded successfully from {file_path}')
+                elif file_extension == '.pdf':
+                    with fitz.open(file_path) as doc:
+                        text = ''
+                        for page in doc:
+                            text += page.get_text()
+                        documents.append(text)
+                        logger.info(f'PDF document loaded successfully from {file_path}')
+                elif file_extension == '.docx':
+                    doc = Document(file_path)
+                    text = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
+                    documents.append(text)
+                    logger.info(f'DOCX document loaded successfully from {file_path}')
             except Exception as e:
-                logger.error(f"Error processing file {file}: {str(e)}")
+                logger.error(f'Failed to load document from {file_path}: {e}')
         else:
-            logger.warning(f"Unsupported file type: {file}")
-    
-    if not documents:
-        logger.warning("No documents were successfully loaded.")
-    
+            logger.warning(f'Skipping unsupported file type: {file_path}')
+
     return documents

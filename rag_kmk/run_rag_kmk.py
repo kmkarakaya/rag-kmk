@@ -2,11 +2,11 @@ from  rag_kmk import CONFIG
 
 def main():
     '''
-        This is the main function to run the RAG-KMK
+        This is the sample function to run the RAG-KMK
     '''       
-    print("RAG-KMK initialized.")
     print("CONFIG:",   CONFIG   )  
-
+    for key in CONFIG.keys():
+        print(key, ":", CONFIG[key], "\n")
     
 
 

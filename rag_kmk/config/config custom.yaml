@@ -5,7 +5,6 @@ vector_db:
   settings:
     persist_directory: "./chroma_db"
     collection_name: "rag_collection"
-    embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
 
 # LLM Configuration
 llm:
@@ -18,9 +17,9 @@ llm:
 # Knowledge Base Configuration
 knowledge_base:
   chunk_size: 1000
-  chunk_overlap: 200  
+  chunk_overlap: 200
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
   max_file_size: 10485760  # 10MB in bytes
-  loaded_file_dir: "loaded_files"
 
 # RAG Query Configuration
 rag:

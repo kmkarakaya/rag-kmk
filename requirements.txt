@@ -1,3 +1,5 @@
 numpy
 pyyaml
 PyYAML
+PyMuPDF
+python-docx
