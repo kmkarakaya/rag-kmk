@@ -1,4 +1,4 @@
  
 # document_loader module
 
-::: knowledge_base.document_loader
+::: rag_kmk.knowledge_base.document_loader

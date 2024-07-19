@@ -4,8 +4,9 @@ from rag_kmk.utils import load_config, setup_logger, is_supported_file_type, cle
 # test
 
 def load_documents(file_list):
-    # Load the documents from the files in the file list
-
+    '''
+      Load the documents from the files in the file list
+    '''
     config = load_config()  # Load the configuration
     logger = setup_logger('document_loader', config['logging']['file'])
     
