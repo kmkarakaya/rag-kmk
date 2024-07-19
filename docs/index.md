@@ -8,7 +8,7 @@
 
 
 -   Free software: MIT License
--   Documentation: <https://kmkarakaya.github.io/rag_kmk>
+-   Documentation: <https://kmkarakaya.github.io/rag-kmk>
     
 
 ## Features
