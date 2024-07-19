@@ -16,6 +16,11 @@
          <changefreq>daily</changefreq>
     </url>
     <url>
+         <loc>https://kmkarakaya.github.io/rag-kmk/document_loader/</loc>
+         <lastmod>2024-07-19</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
          <loc>https://kmkarakaya.github.io/rag-kmk/faq/</loc>
          <lastmod>2024-07-19</lastmod>
          <changefreq>daily</changefreq>
