@@ -2,7 +2,7 @@
 
 __author__ = """Murat Karakaya"""
 __email__ = "kmkarakaya@gmail.com"
-__version__ = "0.0.20"
+__version__ = "0.0.21"
 
 
 from .utils.config import load_config
