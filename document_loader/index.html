@@ -724,12 +724,11 @@ Currently supports .txt, .pdf, and .docx files.</p>
 <span class="sd">    - list: A list of document contents as strings.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
 
-    <span class="c1"># Initialize the logger with relative path</span>
-    <span class="n">logger</span> <span class="o">=</span> <span class="n">setup_logger</span><span class="p">(</span><span class="s1">&#39;document_loader&#39;</span><span class="p">,</span> <span class="s1">&#39;logs/document_loader.log&#39;</span><span class="p">)</span>
+
     <span class="n">documents</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">document_directory_path</span><span class="p">):</span>
-        <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">document_directory_path</span><span class="si">}</span><span class="s1"> is not a directory.&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">document_directory_path</span><span class="si">}</span><span class="s1"> is not a directory.&#39;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">documents</span>
 
     <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="n">document_directory_path</span><span class="p">):</span>
@@ -742,23 +741,23 @@ Currently supports .txt, .pdf, and .docx files.</p>
                     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
                         <span class="n">document</span> <span class="o">=</span> <span class="n">file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
                     <span class="n">documents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">document</span><span class="p">)</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Text document loaded successfully from </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Text document loaded successfully from </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="n">file_extension</span> <span class="o">==</span> <span class="s1">&#39;.pdf&#39;</span><span class="p">:</span>
                     <span class="k">with</span> <span class="n">fitz</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">doc</span><span class="p">:</span>
                         <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;&#39;</span>
                         <span class="k">for</span> <span class="n">page</span> <span class="ow">in</span> <span class="n">doc</span><span class="p">:</span>
                             <span class="n">text</span> <span class="o">+=</span> <span class="n">page</span><span class="o">.</span><span class="n">get_text</span><span class="p">()</span>
                     <span class="n">documents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;PDF document loaded successfully from </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;PDF document loaded successfully from </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
                 <span class="k">elif</span> <span class="n">file_extension</span> <span class="o">==</span> <span class="s1">&#39;.docx&#39;</span><span class="p">:</span>
                     <span class="n">doc</span> <span class="o">=</span> <span class="n">Document</span><span class="p">(</span><span class="n">file_path</span><span class="p">)</span>
                     <span class="n">text</span> <span class="o">=</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">paragraph</span><span class="o">.</span><span class="n">text</span> <span class="k">for</span> <span class="n">paragraph</span> <span class="ow">in</span> <span class="n">doc</span><span class="o">.</span><span class="n">paragraphs</span><span class="p">])</span>
                     <span class="n">documents</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">text</span><span class="p">)</span>
-                    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;DOCX document loaded successfully from </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;DOCX document loaded successfully from </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
-                <span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Failed to load document from </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Failed to load document from </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s1">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
         <span class="k">else</span><span class="p">:</span>
-            <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Skipping unsupported file type: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Skipping unsupported file type: </span><span class="si">{</span><span class="n">file_path</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 
     <span class="k">return</span> <span class="n">documents</span>
 </code></pre></div>
