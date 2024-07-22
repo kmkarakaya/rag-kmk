@@ -28,6 +28,7 @@ def build_knowledge_base(document_directory_path):
 
     if not os.path.isdir(document_directory_path):
         print(f'{document_directory_path} is not a directory.')
+        return
         
 
     for filename in os.listdir(document_directory_path):
@@ -73,15 +74,6 @@ def build_knowledge_base(document_directory_path):
         else:
             print(f'\nSkipping unsupported file type: {file_path}')
 
-
-    #chroma_collection = add_document_to_collection(all_ids, all_metadatas, all_text_chunksinTokens, chroma_collection)
-    #for i in range(0, len(all_ids), 1000):
-    '''
-    for i in range(0, len(all_ids)):
-        print("Before inserting, the size of the collection: ", chroma_collection.count(),chroma_collection.name)
-        #print(f"Total number of chunks to be inserted: {len(all_ids)   }")   
-        print(all_ids[i], all_text_chunksinTokens[i] )
-        chroma_collection.add(ids=all_ids[i],  documents=all_text_chunksinTokens[i])
-        print("After inserting, the size of the collection: ", chroma_collection.count())
-
-        '''
+    print(f'\nKnowledge Based populated by a total number of {chroma_collection.count()} document chunks from {document_directory_path}.')
+    return chroma_collection
+    

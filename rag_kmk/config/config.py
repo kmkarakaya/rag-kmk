@@ -21,4 +21,3 @@ def load_config(custom_config_path=None):
                 return CONFIG or {}
     except FileNotFoundError:
         return {}
-

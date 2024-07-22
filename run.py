@@ -1,5 +1,8 @@
 from  rag_kmk import CONFIG
 from rag_kmk.knowledge_base import build_knowledge_base   
+from rag_kmk.vector_db import summarize_collection, retrieve_chunks, show_results
+from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_rag_pipeline  
+
 
 
 def main():
@@ -12,9 +15,46 @@ def main():
     
 
     # Load the documents
-    build_knowledge_base(r'.\tests\sample_documents')     
+    knowledge_base= build_knowledge_base(r'.\tests\sample_documents')     
 
-    print("Documents loaded successfully.")  
+    print("-----------------"*4)  
+    # Summarize the collection
+    summarize_collection(knowledge_base)
+
+    '''
+    print("-----------------"*4)
+    query = "What are the main causes of student success considering attandnce and study habits?"
+    retrieved_chunks=retrieve_chunks(chroma_collection, query, 3)
+    show_results(retrieved_chunks)
+    '''
+    
+    
+    '''
+    print("-----------------"*4)
+    prompt="What is FC?"
+    context= """FC lets developers create a description
+    of a F in their code, then pass that description to a language
+    model in a request.
+    The response from the model includes the name of
+    a F that matches the description and the arguments to call it with.
+    FC lets you use F as tools in generative AI applications,
+    and you can define more than one F within a single request."""
+    
+    response=generate_LLM_answer(prompt, context,RAG_LLM)
+    print(response)
+    '''
+
+    '''
+    query = "What are the main causes of student success considering attandnce and study habits?"
+    reply=generateAnswer(RAG_LLM, chroma_collection, query,3, only_response=False)
+    print(reply)
+    '''
+
+    run_rag_pipeline(RAG_LLM,knowledge_base)
+
+
+
+
 
     
     '''

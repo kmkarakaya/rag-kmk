@@ -5,10 +5,8 @@ __email__ = "kmkarakaya@gmail.com"
 __version__ = "0.0.25"
 
 
-from .utils.config import load_config
-#from .knowledge_base import build_knowledge_base
-#from .vector_db import build_vector_db
-#from .chat_flow import build_rag_llm
+from .config.config import load_config
+
 
 # Define the initialize_rag function
 def initialize_rag(custom_config_path=None):

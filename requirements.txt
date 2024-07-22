@@ -5,4 +5,4 @@ PyMuPDF
 python-docx
 langchain
 sentence_transformers
-
+google.generativeai

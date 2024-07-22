@@ -1,9 +1,9 @@
-from .prompt_handler import handle_prompt
-from .llm_interface import RAGLLM
+from .llm_interface import build_chatBot, generate_LLM_answer, generateAnswer,run_rag_pipeline
+from rag_kmk import CONFIG   
 
-def build_rag_llm(vector_db, config):
-    llm_config = config['llm']
-    rag_config = config['rag']
-    return RAGLLM(vector_db, llm_config, rag_config)
 
-__all__ = ['build_rag_llm']
+# Access the system_prompt value
+system_prompt = CONFIG['llm']['settings']['system_prompt']
+RAG_LLM = build_chatBot(system_prompt)
+
+__all__ = ['build_rag_llm', 'generate_LLM_answer', 'RAG_LLM', 'generateAnswer', 'run_rag_pipeline'] 

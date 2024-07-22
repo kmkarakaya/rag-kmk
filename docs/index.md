@@ -14,3 +14,7 @@
 ## Features
 
 -   TODO
+
+## Requirements
+# Retrieve GOOGLE_API_KEY from system environment variables
+-  Needs a GOOGLE API KEY stored in the system environment variables as GOOGLE_API_KEY or you can enter your key when requested.
