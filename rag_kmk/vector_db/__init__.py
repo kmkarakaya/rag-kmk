@@ -1,9 +1,5 @@
-from .database import VectorDatabase
+from .database import create_chroma_client
 
-def build_vector_db(vectors, config):
-    db_config = config['vector_db']
-    db = VectorDatabase(db_config)
-    db.add_vectors(vectors)
-    return db
 
-__all__ = ['build_vector_db']
+
+__all__ = ['create_chroma_client']

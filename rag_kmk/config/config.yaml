@@ -2,10 +2,11 @@
 # Vector Database Configuration
 vector_db:
   type: "chromadb"
-  settings:
-    persist_directory: "./chroma_db"
-    collection_name: "rag_collection"
-    embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  chromaDB_path: # "./chroma_db"
+  collection_name: "rag_collection"
+  embedding_model: "distiluse-base-multilingual-cased-v2"
+  tokens_per_chunk: 128
+  category: "Journal Paper"
 
 # LLM Configuration
 llm:
@@ -17,10 +18,10 @@ llm:
 
 # Knowledge Base Configuration
 knowledge_base:
-  chunk_size: 1000
-  chunk_overlap: 200  
+  chunk_size: 1500
+  chunk_overlap: 0  
   max_file_size: 10485760  # 10MB in bytes
-  loaded_file_dir: "loaded_files"
+  
 
 # RAG Query Configuration
 rag:
