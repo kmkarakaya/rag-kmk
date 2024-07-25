@@ -11,7 +11,6 @@ def main():
     Load the documents from the sample_documents folder and print the first 200 characters of each document.        
 
     '''
-
     
 
     # Load the documents
