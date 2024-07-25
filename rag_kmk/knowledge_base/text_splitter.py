@@ -9,7 +9,7 @@ def convert_Pages_ChunkinChar(text_in_pages, chunk_size=CONFIG["knowledge_base"]
                                                         chunk_size=chunk_size, 
                                                         chunk_overlap=chunk_overlap)
     character_split_texts = character_splitter.split_text('\n\n'.join(text_in_pages))
-    print(f"Total number of chunks (document splited by max char = {chunk_size}): {len(character_split_texts)}")
+    print(f"Total number of chunks (document split by max char = {chunk_size}): {len(character_split_texts)}")
     return character_split_texts
 
 def convert_Chunk_Token(text_chunksinChar,
@@ -25,7 +25,7 @@ def convert_Chunk_Token(text_chunksinChar,
     for text in text_chunksinChar:
         text_chunksinTokens += token_splitter.split_text(text)
         
-    print(f"Total number of chunks (document splited by 128 tokens per chunk): {len(text_chunksinTokens)}")
+    print(f"Total number of chunks (document split by 128 tokens per chunk): {len(text_chunksinTokens)}")
     return text_chunksinTokens
 
 def add_document_to_collection(ids, metadatas, text_chunksinTokens, chroma_collection):

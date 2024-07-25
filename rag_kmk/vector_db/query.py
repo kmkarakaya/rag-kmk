@@ -47,7 +47,7 @@ def show_results(results, return_only_docs=False):
           return
       retrieved_documents_metadata = results['metadatas'][0]
       retrieved_documents_distances = results['distances'][0]
-      print("------- retreived documents -------\n")
+      print("------- retrieved documents -------\n")
 
       for i, doc in enumerate(retrieved_documents):
           print(f"Document {i+1}:")
