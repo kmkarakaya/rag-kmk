@@ -37,16 +37,19 @@ def generateAnswer(RAG_LLM, chroma_collection,query,n_results=10, only_response=
       print("------- RAG answer -------\n")
     output = generate_LLM_answer(prompt, context, RAG_LLM)
 
-    print(output)
-    print('\n')
+    print('\nModel: ',output)
+    
     return output
 
 def run_rag_pipeline(RAG_LLM,chroma_collection):
     RAG_LLM.history.clear()
+    print("-------"*10, "\n")
+    print("Welcome to the RAG pipeline. Please enter your question or type 'bye' to exit.")
     while True:
-        question = input("Please enter your question, or type 'bye' to exit: ")
+        question = input("\nUser: ")
         if question == "bye":
             print("Thank you for using the service. Goodbye!")
+            print("-------"*10, "\n")
             break
         else:
             generateAnswer(RAG_LLM, chroma_collection, question)
