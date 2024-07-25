@@ -107,10 +107,13 @@ def get_API_key():
             print("API key from .env file is not valid. Correct it for the next time please!")
             GEMINI_API_KEY=None
     else:
-        print("API key from .env file is not found. Please enter it manually.")
+        print("API key from .env file is not found.")
+        print("Exiting the program.")
+        print("-------"*10, "\n")
+        exit()
         
 
-
+    '''
     if GEMINI_API_KEY is None:
         GEMINI_API_KEY = input("Please get & enter your Google Gemini API Key: ")
         if verify_api_key(GEMINI_API_KEY):
@@ -123,7 +126,7 @@ def get_API_key():
             print("-------"*10, "\n")
             exit()
             
-     
+     '''
     
 
 def build_chatBot(system_instruction):
