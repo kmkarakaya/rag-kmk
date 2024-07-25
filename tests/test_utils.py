@@ -2,7 +2,7 @@
 
 import unittest
 from unittest.mock import patch, mock_open
-from rag_kmk.utils.config import load_config
+from rag_kmk.config import load_config
 
 
 class ConfigTestCase(unittest.TestCase):
