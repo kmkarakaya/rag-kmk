@@ -1,0 +1,43 @@
+#config.yaml
+# Vector Database Configuration
+vector_db:
+  type: "chromadb"
+  settings:
+    persist_directory: "./chroma_db"
+    collection_name: "rag_collection"
+
+# LLM Configuration
+llm:
+  type: "gemini"
+  model: "gemini-pro"  # or whichever Gemini model you're using
+  settings:
+    temperature: 0.7
+    max_output_tokens: 1024
+
+# Knowledge Base Configuration
+knowledge_base:
+  chunk_size: 1000
+  chunk_overlap: 200
+  embedding_model: "sentence-transformers/all-MiniLM-L6-v2"
+  max_file_size: 10485760  # 10MB in bytes
+
+# RAG Query Configuration
+rag:
+  num_chunks_to_retrieve: 5
+  similarity_threshold: 0.7
+
+# API Keys (Note: In practice, it's better to use environment variables for sensitive information)
+api_keys:
+  google_ai: "YOUR_GOOGLE_AI_API_KEY"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "logs/rag_kmk.log"
+
+# Supported File Types
+supported_file_types:
+  - ".txt"
+  - ".pdf"
+  - ".docx"
+

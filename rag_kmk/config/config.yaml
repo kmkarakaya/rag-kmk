@@ -1,0 +1,63 @@
+#config.yaml
+# Vector Database Configuration
+vector_db:
+  type: "chromadb"
+  chromaDB_path: # "./chroma_db"
+  collection_name: "rag_collection"
+  embedding_model: "distiluse-base-multilingual-cased-v2"
+  tokens_per_chunk: 128
+  category: "Journal Paper"
+
+# LLM Configuration
+llm:
+  type: "gemini"
+  model: "gemini-pro"  # or whichever Gemini model you're using
+  settings:
+    temperature: 0.7
+    max_output_tokens: 1024
+    system_prompt: |
+      You are an attentive and supportive academic assistant.
+      Your role is to provide assistance based solely on the provided context.
+      Here’s how we’ll proceed:
+      1. I will provide you with a question and related text excerpt.
+      2. Your task is to answer the question using only the provided partial texts.
+      3. If the answer isn’t explicitly found within the given context,
+      respond with 'I don't know'.
+      4. After each response, please provide a detailed explanation.
+      Break down your answer step by step and relate it directly to the provided context.
+      5. Sometimes, I will ask questions about the chat session, such as summarize
+      the chat or list the question etc. For this kind of questions do not try
+      to use the provided partial texts.
+      6. Generate the answer in the same language of the given question.
+
+      If you're ready, I'll provide you with the question and the context.
+   
+
+
+# Knowledge Base Configuration
+knowledge_base:
+  chunk_size: 1500
+  chunk_overlap: 0  
+  max_file_size: 10485760  # 10MB in bytes
+  
+
+# RAG Query Configuration
+rag:
+  num_chunks_to_retrieve: 5
+  similarity_threshold: 0.7
+
+# API Keys (Note: In practice, it's better to use environment variables for sensitive information)
+api_keys:
+  google_ai: "YOUR_GOOGLE_AI_API_KEY"
+
+# Logging Configuration
+logging:
+  level: "INFO"
+  file: "logs/rag_kmk.log"
+
+# Supported File Types
+supported_file_types:
+  - ".txt"
+  - ".pdf"
+  - ".docx"
+
