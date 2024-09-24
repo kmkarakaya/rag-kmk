@@ -3,8 +3,6 @@ from rag_kmk.knowledge_base import build_knowledge_base
 from rag_kmk.vector_db import summarize_collection, retrieve_chunks, show_results
 from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_rag_pipeline  
 
-
-
 def main():
        
     '''
