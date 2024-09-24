@@ -14,4 +14,5 @@
 
 ## Features
 
--   TODO
+-   TODO: 
+- add other file types
