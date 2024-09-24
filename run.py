@@ -4,7 +4,6 @@ from rag_kmk.vector_db import summarize_collection, retrieve_chunks, show_result
 from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_rag_pipeline  
 
 
-
 def main():
        
     '''
