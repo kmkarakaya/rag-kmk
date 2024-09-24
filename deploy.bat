@@ -1,5 +1,7 @@
 @echo off
 REM https://www.youtube.com/watch?v=Z2d1Kw1xSVY
+REM https://github.com/opengeos/cookiecutter-pypackage
+REM https://github.com/kmkarakaya/rag-kmk
 
 git add .
 git commit -m "Package Structure Created"
