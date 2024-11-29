@@ -10,9 +10,10 @@
 
 -   Free software: MIT License
 -   Documentation: https://kmkarakaya.github.io/rag-kmk
+-   Tutorial: https://www.youtube.com/@MuratKarakayaAkademi
     
 
 ## Features
 
--   TODO: 
+- TODO: 
 - add other file types

@@ -6,3 +6,4 @@ langchain
 sentence_transformers
 google.generativeai
 chromadb==0.5.3
+streamlit

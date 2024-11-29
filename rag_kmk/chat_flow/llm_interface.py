@@ -1,11 +1,9 @@
 import google.generativeai as genai
 from rag_kmk.vector_db import retrieve_chunks
 import os
-
-
 import requests
 
-import requests
+
 
 def verify_api_key(api_key):
     url = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent"
