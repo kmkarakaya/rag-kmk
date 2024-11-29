@@ -23,8 +23,8 @@ knowledge_base:
 
 # RAG Query Configuration
 rag:
-  num_chunks_to_retrieve: 5
-  similarity_threshold: 0.7
+  num_chunks_to_retrieve: 10
+  similarity_threshold: 1.2
 
 # API Keys (Note: In practice, it's better to use environment variables for sensitive information)
 api_keys:

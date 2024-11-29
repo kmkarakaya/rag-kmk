@@ -13,7 +13,9 @@ def main():
     
 
     # Load the documents
-    knowledge_base= build_knowledge_base(r'.\tests\sample_documents')     
+    knowledge_base= build_knowledge_base(r'.\tests\sample_documents') 
+    print("-----------------"*4)
+    print(CONFIG)    
 
     print("-----------------"*4)  
     # Summarize the collection
