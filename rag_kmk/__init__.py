@@ -26,8 +26,11 @@ def initialize_rag(custom_config_path=None):
 
 # Load the configuration when the module is imported
 try:
-    CONFIG = initialize_rag("./config.yaml") # Load the custom config file from the current directory AI!
+    CONFIG = initialize_rag("./config.yaml")
     print(f"RAG-KMK initialized with config")
+except FileNotFoundError:
+    print("Custom config file not found, using default config.")
+    CONFIG = initialize_rag()
 except Exception as e:
     print(f"Error initializing rag-kmk module: {e}")
 
