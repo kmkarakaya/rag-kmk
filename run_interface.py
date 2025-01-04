@@ -16,11 +16,11 @@ def main_interface():
     # Load knowledge base
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
-            files_location = st.sidebar.text_input("Files Location:", value=r".\files") # instead of ext_input it should be a folder picker AI!
-            if not os.path.exists(files_location):
-                st.sidebar.error("Invalid directory path.")
+            files_location = st.sidebar.text_input("Files Location:", value=r".\files") 
+            if not os.path.isdir(files_location):
+                st.sidebar.error("Invalid directory path. Please enter a valid directory.")
             else:
-                knowledge_base = build_knowledge_base(files_location) # Use the value from sidebar
+                knowledge_base = build_knowledge_base(files_location) 
                 if knowledge_base: 
                     summarize_collection(knowledge_base) 
                     st.session_state.knowledge_base = knowledge_base
