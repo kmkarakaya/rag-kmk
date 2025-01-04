@@ -16,19 +16,20 @@ def main_interface():
     # Load knowledge base
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
-            # instead of text input widget use a folder selector widget AI!
             files_location = st.sidebar.text_input("Files Location:", value=r".\tests\sample_documents") 
             if not os.path.isdir(files_location):
                 st.sidebar.error("Invalid directory path. Please enter a valid directory.")
             else:
                 knowledge_base = build_knowledge_base(files_location) 
                 if knowledge_base: 
-                    summarize_collection(knowledge_base) # Summarize the collection on the left sidebar as a collapsable widget AI!
+                    summary = summarize_collection(knowledge_base)
+                    with st.sidebar.expander("Knowledge Base Summary"):
+                        st.markdown(summary)
                     st.session_state.knowledge_base = knowledge_base
                     status.update(label="Knowledge Base is ready!", state="complete")
                 else:
                     status.update(label="No documents loaded.", state="error")
-    
+
 
     # Initialize chat history
     if "messages" not in st.session_state:
