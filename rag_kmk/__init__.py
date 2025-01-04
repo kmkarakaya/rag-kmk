@@ -15,17 +15,18 @@ def initialize_rag(custom_config_path=None):
         This module initialization ensures that rag-kmk is properly set up upon import.
         Initialize the RAG system with either the default or a custom config.
     """
-    config_path = custom_config_path or "./config.yaml"  # Use custom path or default
-    CONFIG = load_config() #Load default config first
+    
+     
 
-    if os.path.exists(config_path):
+    if os.path.exists(custom_config_path):
         try:
-            with open(config_path, 'r') as f:
+            with open(custom_config_path, 'r') as f:
                 yaml.safe_load(f)  # Validate YAML
-            print(f"Loading config from: {config_path}")
-            CONFIG = load_config(config_path)
+            print(f"Loading custom config from: {custom_config_path}")
+            CONFIG = load_config(custom_config_path)
         except (yaml.YAMLError, FileNotFoundError, Exception) as e:
-            print(f"Error loading config from {config_path}: {e}. Using default config.")
+            print(f"Error loading config from {custom_config_path}: {e}. Using default config.")
+            CONFIG = load_config()
 
     return CONFIG
 
