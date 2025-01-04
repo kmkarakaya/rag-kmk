@@ -24,7 +24,7 @@ def main_interface():
                 if knowledge_base: 
                     summary = summarize_collection(knowledge_base)
                     with st.sidebar.expander("Knowledge Base Summary"):
-                        st.markdown(summary)
+                        st.markdown(summary) # format the summary so that the file names are displayed in a list format AI!
                     st.session_state.knowledge_base = knowledge_base
                     status.update(label="Knowledge Base is ready!", state="complete")
                 else:
