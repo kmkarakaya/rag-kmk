@@ -13,7 +13,7 @@ def main_interface():
     st.title("🦜 RAG KMK")
     st.sidebar.title("CONFIG") # Add sidebar title
 
-    # Load knowledge base
+    # Load knowledge base - moved outside the main loop
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
             files_location = st.sidebar.text_input("Files Location:", value=r".\tests\sample_documents") 
@@ -38,6 +38,20 @@ def main_interface():
                     status.update(label="Knowledge Base is ready!", state="complete")
                 else:
                     status.update(label="No documents loaded.", state="error")
+    else:
+        #If knowledge base already exists, display the summary again.
+        summary = summarize_collection(st.session_state.knowledge_base)
+        try:
+            # Attempt to split the summary into lines, assuming newline as delimiter
+            filenames = summary.strip().splitlines()
+            # Create a bulleted list
+            formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
+            with st.sidebar.expander("Knowledge Base Summary"):
+                st.markdown(formatted_summary)
+        except AttributeError:
+            # Handle cases where summary is not a string or doesn't have splitlines
+            with st.sidebar.expander("Knowledge Base Summary"):
+                st.markdown("Summary not available in the expected format.")
 
 
     # Initialize chat history
