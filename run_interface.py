@@ -7,21 +7,26 @@ from rag_kmk.knowledge_base import build_knowledge_base
 from rag_kmk.vector_db import summarize_collection 
 from rag_kmk.chat_flow import RAG_LLM, generateAnswer
 import streamlit as st
+import os
 
 def main_interface():
     st.title("🦜 RAG KMK")
-
+    st.sidebar.title("CONFIG") # Add sidebar title
 
     # Load knowledge base
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
-            knowledge_base= build_knowledge_base(r'.\files') 
-            if knowledge_base: 
-                summarize_collection(knowledge_base) 
-                st.session_state.knowledge_base = knowledge_base
-                status.update(label="Knowledge Base is ready!", state="complete")
+            files_location = st.sidebar.text_input("Files Location:", value=r".\files") # Moved to sidebar
+            if not os.path.exists(files_location):
+                st.sidebar.error("Invalid directory path.")
             else:
-                status.update(label="No documents loaded.", state="error")
+                knowledge_base = build_knowledge_base(files_location) # Use the value from sidebar
+                if knowledge_base: 
+                    summarize_collection(knowledge_base) 
+                    st.session_state.knowledge_base = knowledge_base
+                    status.update(label="Knowledge Base is ready!", state="complete")
+                else:
+                    status.update(label="No documents loaded.", state="error")
     
 
     # Initialize chat history
