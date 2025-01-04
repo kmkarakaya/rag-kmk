@@ -23,8 +23,17 @@ def main_interface():
                 knowledge_base = build_knowledge_base(files_location) 
                 if knowledge_base: 
                     summary = summarize_collection(knowledge_base)
-                    with st.sidebar.expander("Knowledge Base Summary"):
-                        st.markdown(summary) # format the summary so that the file names are displayed in a list format AI!
+                    try:
+                        # Attempt to split the summary into lines, assuming newline as delimiter
+                        filenames = summary.strip().splitlines()
+                        # Create a bulleted list
+                        formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
+                        with st.sidebar.expander("Knowledge Base Summary"):
+                            st.markdown(formatted_summary)
+                    except AttributeError:
+                        # Handle cases where summary is not a string or doesn't have splitlines
+                        with st.sidebar.expander("Knowledge Base Summary"):
+                            st.markdown("Summary not available in the expected format.")
                     st.session_state.knowledge_base = knowledge_base
                     status.update(label="Knowledge Base is ready!", state="complete")
                 else:
