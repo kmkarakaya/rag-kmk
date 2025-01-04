@@ -16,17 +16,17 @@ def initialize_rag(custom_config_path=None):
     """
     if custom_config_path:
         if os.path.isdir(custom_config_path):
+            print("Custom config file uploading from "+custom_config_path)
             CONFIG = load_config(custom_config_path)
             return CONFIG
         else:
             print("Default config file uploading...")
-    
     CONFIG = load_config()
     return CONFIG
 
 # Load the configuration when the module is imported
 try:
-    CONFIG = initialize_rag("./config.yaml")
+    CONFIG = initialize_rag("./config.yaml") # Load the custom config file from the current directory AI!
     print(f"RAG-KMK initialized with config")
 except Exception as e:
     print(f"Error initializing rag-kmk module: {e}")
