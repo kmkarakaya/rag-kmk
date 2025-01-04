@@ -6,7 +6,7 @@ __version__ = "0.0.40"
 
 
 from .config.config import load_config
-
+import os
 
 # Define the initialize_rag function
 def initialize_rag(custom_config_path=None):
@@ -14,12 +14,15 @@ def initialize_rag(custom_config_path=None):
         This module initialization ensures that rag-kmk is properly set up upon import.
         Initialize the RAG system with either the default or a custom config.
     """
-    if custom_config_path: #check that given path is valid AI!
-        CONFIG= load_config(custom_config_path)
-        return CONFIG
-    else:
-        CONFIG= load_config()
-        return CONFIG
+    if custom_config_path:
+        if os.path.isdir(custom_config_path):
+            CONFIG = load_config(custom_config_path)
+            return CONFIG
+        else:
+            print("Default config file uploading...")
+    
+    CONFIG = load_config()
+    return CONFIG
 
 # Load the configuration when the module is imported
 try:
