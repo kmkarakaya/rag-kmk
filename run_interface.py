@@ -1,6 +1,8 @@
 #pip install rag-kmk
 #pip install streamlit
-#streamlit run test.py
+#streamlit run run_interface.py
+# Ensure that you have a directory ./files with some documents in it.
+
 from rag_kmk.knowledge_base import build_knowledge_base  
 from rag_kmk.vector_db import summarize_collection 
 from rag_kmk.chat_flow import RAG_LLM, generateAnswer
