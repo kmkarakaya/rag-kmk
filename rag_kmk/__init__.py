@@ -7,6 +7,7 @@ __version__ = "0.0.40"
 
 from .config.config import load_config
 import os
+import yaml
 
 # Define the initialize_rag function
 def initialize_rag(custom_config_path=None):
@@ -15,23 +16,28 @@ def initialize_rag(custom_config_path=None):
         Initialize the RAG system with either the default or a custom config.
     """
     if custom_config_path:
-        if os.path.isdir(custom_config_path):
-            print("Custom config file uploading from "+custom_config_path)
-            CONFIG = load_config(custom_config_path)
-            return CONFIG
+        if os.path.isfile(custom_config_path):
+            try:
+                with open(custom_config_path, 'r') as f:
+                    yaml.safe_load(f) #Attempt to parse YAML, raises error if invalid
+                print(f"Custom config file uploading from {custom_config_path}")
+                CONFIG = load_config(custom_config_path)
+                return CONFIG
+            except yaml.YAMLError as e:
+                print(f"Error parsing YAML config file: {e}. Using default config.")
+                return load_config()
+            except Exception as e:
+                print(f"An unexpected error occurred while loading the config file: {e}. Using default config.")
+                return load_config()
         else:
             print("Default config file uploading...")
     CONFIG = load_config()
     return CONFIG
 
 # Load the configuration when the module is imported
-# AI: even the config.yaml in the current folder, the default config is loaded still why?. AI!n
 try:
     CONFIG = initialize_rag("./config.yaml")
     print(f"RAG-KMK initialized with config")
-except FileNotFoundError:
-    print("Custom config file not found, using default config.")
-    CONFIG = initialize_rag()
 except Exception as e:
     print(f"Error initializing rag-kmk module: {e}")
 
