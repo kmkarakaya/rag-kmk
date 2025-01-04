@@ -25,6 +25,7 @@ def initialize_rag(custom_config_path=None):
     return CONFIG
 
 # Load the configuration when the module is imported
+# AI: even the config.yaml in the current folder, the default config is loaded still why?. AI!n
 try:
     CONFIG = initialize_rag("./config.yaml")
     print(f"RAG-KMK initialized with config")
