@@ -3,14 +3,15 @@
 from  rag_kmk import CONFIG
 from rag_kmk.knowledge_base import build_knowledge_base   
 from rag_kmk.vector_db import summarize_collection, retrieve_chunks, show_results
-from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_rag_pipeline  
+from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_rag_pipeline, build_chatBot
 
 
 def main():
     print(CONFIG['llm']['model'])
     CONFIG.update({'llm': {'model': 'gemini-1.5-flash-latest'}})
     print(CONFIG['llm']['model'])
-
+    global RAG_LLM
+    RAG_LLM = build_chatBot()
     
     # # Load the documents
     # knowledge_base= build_knowledge_base(r'.\tests\sample_documents') 
