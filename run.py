@@ -7,7 +7,7 @@ from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_
 
 
 def main():
-
+    print(CONFIG['LLM'])
     CONFIG.update({'LLM': {'settings': {'system_prompt': 'Q: What is'}}})
     print(CONFIG['LLM'])
     # # Load the documents
