@@ -8,8 +8,10 @@ from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_
 
 def main():
     print(CONFIG['llm']['model'])
-    CONFIG.update({'llm': {'model': 'updated-model-name'}})
+    CONFIG.update({'llm': {'model': 'gemini-1.5-flash-latest'}})
     print(CONFIG['llm']['model'])
+
+    
     # # Load the documents
     # knowledge_base= build_knowledge_base(r'.\tests\sample_documents') 
     # print("-----------------"*4)
