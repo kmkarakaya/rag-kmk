@@ -1,6 +1,6 @@
 [project]
 name = "rag-kmk"
-version = "0.0.40"
+version = "0.0.41"
 dynamic = [
     "dependencies",
 ]
@@ -52,7 +52,7 @@ universal = true
 
 
 [tool.bumpversion]
-current_version = "0.0.40"
+current_version = "0.0.41"
 commit = true
 tag = true
 
