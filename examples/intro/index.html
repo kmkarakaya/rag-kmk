@@ -22,7 +22,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.46">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
     
     
       
@@ -832,6 +832,7 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
                     processEnvironments: true
                 },
                 displayAlign: 'center',
+                messageStyle: 'none',
                 CommonHTML: {
                     linebreaks: {
                     automatic: true
@@ -1059,11 +1060,11 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1">#pip install rag-kmk</span>
-<span class="kn">from</span> <span class="nn">rag_kmk.knowledge_base</span> <span class="kn">import</span> <span class="n">build_knowledge_base</span>  
-<span class="kn">from</span> <span class="nn">rag_kmk.vector_db</span> <span class="kn">import</span> <span class="n">summarize_collection</span> 
-<span class="kn">from</span> <span class="nn">rag_kmk.chat_flow</span> <span class="kn">import</span> <span class="n">RAG_LLM</span><span class="p">,</span> <span class="n">run_rag_pipeline</span>    
+<span class="kn">from</span><span class="w"> </span><span class="nn">rag_kmk.knowledge_base</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_knowledge_base</span>  
+<span class="kn">from</span><span class="w"> </span><span class="nn">rag_kmk.vector_db</span><span class="w"> </span><span class="kn">import</span> <span class="n">summarize_collection</span> 
+<span class="kn">from</span><span class="w"> </span><span class="nn">rag_kmk.chat_flow</span><span class="w"> </span><span class="kn">import</span> <span class="n">RAG_LLM</span><span class="p">,</span> <span class="n">run_rag_pipeline</span>    
 
-<span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">main</span><span class="p">():</span>
     <span class="n">knowledge_base</span><span class="o">=</span> <span class="n">build_knowledge_base</span><span class="p">(</span><span class="sa">r</span><span class="s1">'.\files'</span><span class="p">)</span> 
     <span class="k">if</span> <span class="n">knowledge_base</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">'No knowledge base created. Exiting'</span><span class="p">)</span>
@@ -1100,7 +1101,7 @@ if __name__ == "__main__":
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>RAG-KMK initialized with config
+<pre>RAG-KMK initialized with config: {'vector_db': {'type': 'chromadb', 'chromaDB_path': None, 'collection_name': 'rag_collection', 'embedding_model': 'distiluse-base-multilingual-cased-v2', 'tokens_per_chunk': 128, 'category': 'Journal Paper'}, 'llm': {'type': 'gemini', 'model': 'gemini-pro', 'settings': {'temperature': 0.7, 'max_output_tokens': 1024, 'system_prompt': "You are an attentive and supportive academic assistant.\nYour role is to provide assistance based solely on the provided context.\nHere’s how we’ll proceed:\n1. I will provide you with a question and related text excerpt.\n2. Your task is to answer the question using only the provided partial texts.\n3. If the answer isn’t explicitly found within the given context,\nrespond with 'I don't know'.\n4. After each response, please provide a detailed explanation.\nBreak down your answer step by step and relate it directly to the provided context.\n5. Sometimes, I will ask questions about the chat session, such as summarize\nthe chat or list the question etc. For this kind of questions do not try\nto use the provided partial texts.\n6. Generate the answer in the same language of the given question.\n\nIf you're ready, I'll provide you with the question and the context.\n"}}, 'knowledge_base': {'chunk_size': 1500, 'chunk_overlap': 0, 'max_file_size': 10485760}, 'rag': {'num_chunks_to_retrieve': 10, 'similarity_threshold': 1.2}, 'api_keys': {'google_ai': 'YOUR_GOOGLE_AI_API_KEY'}, 'logging': {'level': 'INFO', 'file': 'logs/rag_kmk.log'}, 'supported_file_types': ['.txt', '.pdf', '.docx']}
 </pre>
 </div>
 </div>
@@ -1164,12 +1165,12 @@ No knowledge base created. Exiting
 <div class="highlight"><pre><span></span><span class="c1">#pip install rag-kmk</span>
 <span class="c1">#pip install streamlit</span>
 <span class="c1">#streamlit run test.py</span>
-<span class="kn">from</span> <span class="nn">rag_kmk.knowledge_base</span> <span class="kn">import</span> <span class="n">build_knowledge_base</span>  
-<span class="kn">from</span> <span class="nn">rag_kmk.vector_db</span> <span class="kn">import</span> <span class="n">summarize_collection</span> 
-<span class="kn">from</span> <span class="nn">rag_kmk.chat_flow</span> <span class="kn">import</span> <span class="n">RAG_LLM</span><span class="p">,</span> <span class="n">generateAnswer</span>
-<span class="kn">import</span> <span class="nn">streamlit</span> <span class="k">as</span> <span class="nn">st</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rag_kmk.knowledge_base</span><span class="w"> </span><span class="kn">import</span> <span class="n">build_knowledge_base</span>  
+<span class="kn">from</span><span class="w"> </span><span class="nn">rag_kmk.vector_db</span><span class="w"> </span><span class="kn">import</span> <span class="n">summarize_collection</span> 
+<span class="kn">from</span><span class="w"> </span><span class="nn">rag_kmk.chat_flow</span><span class="w"> </span><span class="kn">import</span> <span class="n">RAG_LLM</span><span class="p">,</span> <span class="n">generateAnswer</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">streamlit</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">st</span>
 
-<span class="k">def</span> <span class="nf">main_interface</span><span class="p">():</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">main_interface</span><span class="p">():</span>
     <span class="n">st</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s2">"🦜 RAG KMK"</span><span class="p">)</span>
 
 
@@ -1344,7 +1345,7 @@ No knowledge base created. Exiting
     <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "search.highlight", "search.share"], "search": "../../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../../assets/javascripts/bundle.83f73b43.min.js"></script>
+      <script src="../../assets/javascripts/bundle.88dd0f4e.min.js"></script>
       
         <script src="../../js/timeago.min.js"></script>
       

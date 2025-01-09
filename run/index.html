@@ -18,7 +18,7 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.46">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.5.49">
     
     
       
@@ -577,15 +577,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#run.main" class="md-nav__link">
-    <span class="md-ellipsis">
-      main()
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -625,50 +616,6 @@
 
 
 
-
-
-  <div class="doc doc-object doc-function">
-
-
-
-<h2 id="run.main" class="doc doc-heading">
-<code class="highlight language-python"><span class="n">main</span><span class="p">()</span></code>
-
-
-<a href="#run.main" class="headerlink" title="Permanent link">&para;</a></h2>
-
-    <div class="doc doc-contents ">
-
-      <p>Load the documents from the sample_documents folder and print the first 200 characters of each document.        </p>
-
-        <details class="quote">
-          <summary>Source code in <code>rag-kmk/run.py</code></summary>
-          <div class="highlight"><pre><span></span><code><span class="k">def</span> <span class="nf">main</span><span class="p">():</span>
-
-<span class="w">    </span><span class="sd">&#39;&#39;&#39;</span>
-<span class="sd">    Load the documents from the sample_documents folder and print the first 200 characters of each document.        </span>
-
-<span class="sd">    &#39;&#39;&#39;</span>
-
-
-    <span class="c1"># Load the documents</span>
-    <span class="n">knowledge_base</span><span class="o">=</span> <span class="n">build_knowledge_base</span><span class="p">(</span><span class="sa">r</span><span class="s1">&#39;.\tests\sample_documents&#39;</span><span class="p">)</span> 
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-----------------&quot;</span><span class="o">*</span><span class="mi">4</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="n">CONFIG</span><span class="p">)</span>    
-
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-----------------&quot;</span><span class="o">*</span><span class="mi">4</span><span class="p">)</span>  
-    <span class="c1"># Summarize the collection</span>
-    <span class="k">if</span> <span class="n">knowledge_base</span><span class="p">:</span>
-        <span class="n">summarize_collection</span><span class="p">(</span><span class="n">knowledge_base</span><span class="p">)</span>
-        <span class="n">run_rag_pipeline</span><span class="p">(</span><span class="n">RAG_LLM</span><span class="p">,</span><span class="n">knowledge_base</span><span class="p">)</span>
-    <span class="k">else</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No documents loaded.&quot;</span><span class="p">)</span>
-    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;-----------------&quot;</span><span class="o">*</span><span class="mi">4</span><span class="p">)</span>
-</code></pre></div>
-        </details>
-    </div>
-
-  </div>
 
 
 
@@ -772,7 +719,7 @@
     <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tracking", "navigation.top", "search.highlight", "search.share"], "search": "../assets/javascripts/workers/search.6ce7567c.min.js", "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}}</script>
     
     
-      <script src="../assets/javascripts/bundle.83f73b43.min.js"></script>
+      <script src="../assets/javascripts/bundle.88dd0f4e.min.js"></script>
       
         <script src="../js/timeago.min.js"></script>
       
