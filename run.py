@@ -7,7 +7,7 @@ from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_
 
 
 def main():
-
+    # write the necessary code to print the CONFIG dictionary AI!
     CONFIG.update({'LLM': {'settings': {'system_prompt': 'Q: What is'}}})
     # # Load the documents
     # knowledge_base= build_knowledge_base(r'.\tests\sample_documents')
