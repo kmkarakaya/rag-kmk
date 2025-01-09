@@ -8,9 +8,8 @@ from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_
 
 def main():
 
-    
-    #print the llm values in CONFIG dictionary AI!
     CONFIG.update({'LLM': {'settings': {'system_prompt': 'Q: What is'}}})
+    print(CONFIG['LLM'])
     # # Load the documents
     # knowledge_base= build_knowledge_base(r'.\tests\sample_documents') 
     # print("-----------------"*4)
