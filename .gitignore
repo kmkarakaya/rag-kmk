@@ -108,3 +108,4 @@ ENV/
 
 # github commands
 github_commands.md 
+.aider*
