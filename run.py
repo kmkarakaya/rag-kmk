@@ -8,7 +8,7 @@ from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_
 
 def main():
     print(CONFIG['llm'])
-    CONFIG.update({'llm': {'model': 'gemini-1.5-flash-latest'}})
+    CONFIG['llm'].update({'model': 'gemini-1.5-flash-latest'})
     print(CONFIG['llm'])
     global RAG_LLM
     RAG_LLM = build_chatBot()
