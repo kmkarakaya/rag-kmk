@@ -1,6 +1,6 @@
 #pip install rag-kmk
 #pip install streamlit
-#streamlit run run_interface.py
+# To run: streamlit run run_interface.py
 # Ensure that you have a directory with some documents in it.
 
 from rag_kmk.knowledge_base import build_knowledge_base  
@@ -9,17 +9,17 @@ from rag_kmk.chat_flow import RAG_LLM, generateAnswer
 import streamlit as st
 import os
 import json
-#go over the comments and improve them if necessary. remove the unnecessary ones AI!
+
 def main_interface():
     st.title("🦜 RAG KMK")
     st.sidebar.title("CONFIG") # Add sidebar title
 
-    # Load knowledge base - moved outside the main loop
+    # Load knowledge base - moved outside the main loop to avoid rebuilding on every interaction
     if "knowledge_base" not in st.session_state :
         knowledge_base = None # Initialize knowledge_base
         with st.status("Wait: Loading knowledge base...") as status:
             files_location = st.sidebar.text_input("Files Location:", value="Example: C:\\Users\\KMK\\Desktop\\SİL\\files") 
-            #explain the next if stm AI!
+            
             if files_location and files_location != "Example: C:\\Users\\KMK\\Desktop\\SİL\\files":
                 files_location = files_location.replace("Example: ", "") #remove example prefix
                 if not os.path.isdir(files_location):
