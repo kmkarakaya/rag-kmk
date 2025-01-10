@@ -17,11 +17,10 @@ def main_interface():
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
             files_location = st.sidebar.text_input("Files Location:", value="Example: C:\\Users\\KMK\\Desktop\\SİL\\files") 
-            # at the very first run, the file location is set yet. thus the below error should not be shown until the user enters a new path other than the example AI!
-            if not os.path.isdir(files_location):
+            if files_location and files_location != "Example: C:\\Users\\KMK\\Desktop\\SİL\\files" and not os.path.isdir(files_location):
                 st.sidebar.error("Invalid directory path. Please enter a valid directory.")
             else:
-                knowledge_base = build_knowledge_base(files_location) 
+                knowledge_base = build_knowledge_base(files_location.replace("Example: ", "") if files_location.startswith("Example: ") else files_location)
                 if knowledge_base: 
                     summary = summarize_collection(knowledge_base)
                     try:
