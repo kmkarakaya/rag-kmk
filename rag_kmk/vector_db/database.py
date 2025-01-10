@@ -36,6 +36,7 @@ def create_chroma_client(chromaDB_path=CONFIG["vector_db"]["chromaDB_path"],
 
 
 def summarize_collection(chroma_collection):
+  #revise the code so that it returns the summary as a json object AI!
   summary = [] # Initialize summary as a list
   print("Summarizing the collection...")
   # Verify collection properties
