@@ -22,7 +22,7 @@ def main_interface():
                 if not os.path.isdir(files_location):
                     st.sidebar.error("Invalid directory path. Please enter a valid directory.")
                 else:
-                    knowledge_base = build_knowledge_base(files_location.replace("Example: ", ""))
+                    knowledge_base = build_knowledge_base(files_location)
             if knowledge_base: 
                 summary = summarize_collection(knowledge_base)
                 try:
