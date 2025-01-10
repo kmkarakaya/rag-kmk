@@ -12,12 +12,11 @@ import os
 def main_interface():
     st.title("🦜 RAG KMK")
     st.sidebar.title("CONFIG") # Add sidebar title
-
+    
     # Load knowledge base - moved outside the main loop
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
-            default_path = r"C:\Users\KMK\Desktop\SİL\files" # Define default path
-            files_location = st.sidebar.text_input("Files Location:", value=default_path, help="Enter the path to your files directory.") # Set default value
+            files_location = st.sidebar.text_input("Files Location:", help="Enter the path to your files directory.") 
 
             if files_location: # Check if a path has been entered
                 try:
