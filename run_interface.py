@@ -48,7 +48,8 @@ def main_interface():
                                 formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
                                 with st.sidebar.expander("Knowledge Base Summary"):
                                     st.markdown(formatted_summary)
-                            except AttributeError:
+                            except AttributeError as e:
+                                st.sidebar.error(f"Error summarizing knowledge base: {e}")
                                 with st.sidebar.expander("Knowledge Base Summary"):
                                     st.markdown("Summary not available in the expected format.")
                             st.session_state.knowledge_base = knowledge_base
@@ -58,13 +59,15 @@ def main_interface():
                             st.sidebar.error("No documents found in the specified directory or an error occurred during loading.")
                             attempts += 1 #Increment attempts if no documents are loaded
                             files_location = None #Reset files_location to continue the loop
-                    except (ValueError, OSError, Exception) as e:
+                    except (ValueError, OSError, FileNotFoundError, Exception) as e:
                         st.sidebar.error(f"An error occurred while loading the knowledge base: {e}")
+                        status.exception(e) # Show the full traceback for debugging
                         status.update(label=f"Error loading knowledge base: {e}", state="error")
                         attempts += 1 #Increment attempts if an error occurs
                         files_location = None #Reset files_location to continue the loop
                     except Exception as e:
                         st.sidebar.error(f"An unexpected error occurred: {e}")
+                        status.exception(e) # Show the full traceback for debugging
                         status.update(label=f"An unexpected error occurred: {e}", state="error")
                         attempts += 1 #Increment attempts if an unexpected error occurs
                         files_location = None #Reset files_location to continue the loop
@@ -72,14 +75,18 @@ def main_interface():
                 st.error(f"Maximum number of attempts ({max_attempts}) reached. Please check your input and try again.")
 
     else:
-        summary = summarize_collection(st.session_state.knowledge_base)
         try:
-            filenames = summary.strip().splitlines()
-            formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
-            with st.sidebar.expander("Knowledge Base Summary"):
-                st.markdown(formatted_summary)
-        except AttributeError:
-            with st.sidebar.expander("Knowledge Base Summary"):
-                st.markdown("Summary not available in the expected format.")
+            summary = summarize_collection(st.session_state.knowledge_base)
+            try:
+                filenames = summary.strip().splitlines()
+                formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
+                with st.sidebar.expander("Knowledge Base Summary"):
+                    st.markdown(formatted_summary)
+            except AttributeError as e:
+                st.sidebar.error(f"Error summarizing knowledge base: {e}")
+                with st.sidebar.expander("Knowledge Base Summary"):
+                    st.markdown("Summary not available in the expected format.")
+        except Exception as e:
+            st.error(f"An error occurred while processing the knowledge base: {e}")
     # ... rest of the code ...
 
