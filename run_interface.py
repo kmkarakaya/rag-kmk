@@ -20,6 +20,7 @@ def main():
                 knowledge_base = build_knowledge_base(abs_path)
                 if knowledge_base is None:
                     raise ValueError("Failed to build knowledge base from"+ abs_path)
+                # the summary should be displayed in the left bar as a collapsable section AI!
                 summary = summarize_collection(knowledge_base)
                 st.write(f"Knowledge base summary:\n{summary}")
         except FileNotFoundError:
