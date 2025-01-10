@@ -13,6 +13,7 @@ def main():
     if files_location:
         try:
             with st.spinner("Loading knowledge base..."):
+                # files_location must be a path not just a string. fix that AI!
                 knowledge_base = build_knowledge_base(files_location)
                 if knowledge_base is None:
                     raise ValueError("Failed to build knowledge base.")
