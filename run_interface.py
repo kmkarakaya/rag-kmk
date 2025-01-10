@@ -20,7 +20,9 @@ def main_interface():
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
             files_location = None
-            while files_location is None: #Loop until a valid path is provided
+            max_attempts = 3 # Maximum number of attempts to get a valid path
+            attempts = 0
+            while files_location is None and attempts < max_attempts: #Loop until a valid path is provided or max attempts reached
                 files_location = st.sidebar.text_input("Files Location:", key=FILES_LOCATION_KEY, help="Enter the path to your files directory.") 
                 if files_location: # Check if a path has been entered
                     try:
@@ -28,12 +30,14 @@ def main_interface():
                             #Improved error message
                             st.sidebar.error(f"Invalid directory path: '{files_location}'. Please enter a valid directory path.  The path must point to a directory containing your files.")
                             status.update(label=f"Error: Invalid directory path.", state="error")
+                            attempts += 1 #Increment attempts if path is invalid
                             continue #Skip the rest of the loop if the path is invalid
                         
                         #Check if the directory is empty
                         if not os.listdir(files_location):
                             st.sidebar.error(f"The directory '{files_location}' is empty. Please select a directory containing files.")
                             status.update(label=f"Error: Empty directory.", state="error")
+                            attempts += 1 #Increment attempts if directory is empty
                             files_location = None #Reset files_location to continue the loop
                             continue
                         knowledge_base = build_knowledge_base(files_location)
@@ -52,14 +56,21 @@ def main_interface():
                         else:
                             status.update(label="No documents loaded or an error occurred during loading.", state="error")
                             st.sidebar.error("No documents found in the specified directory or an error occurred during loading.")
+                            attempts += 1 #Increment attempts if no documents are loaded
                             files_location = None #Reset files_location to continue the loop
                     except (ValueError, OSError, Exception) as e:
                         st.sidebar.error(f"An error occurred while loading the knowledge base: {e}")
                         status.update(label=f"Error loading knowledge base: {e}", state="error")
+                        attempts += 1 #Increment attempts if an error occurs
                         files_location = None #Reset files_location to continue the loop
                     except Exception as e:
                         st.sidebar.error(f"An unexpected error occurred: {e}")
                         status.update(label=f"An unexpected error occurred: {e}", state="error")
+                        attempts += 1 #Increment attempts if an unexpected error occurs
+                        files_location = None #Reset files_location to continue the loop
+            if attempts >= max_attempts:
+                st.error(f"Maximum number of attempts ({max_attempts}) reached. Please check your input and try again.")
+
     else:
         summary = summarize_collection(st.session_state.knowledge_base)
         try:
