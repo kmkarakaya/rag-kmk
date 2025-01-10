@@ -20,7 +20,8 @@ def main_interface():
             if files_location and files_location != "Example: C:\\Users\\KMK\\Desktop\\SİL\\files" and not os.path.isdir(files_location):
                 st.sidebar.error("Invalid directory path. Please enter a valid directory.")
             else:
-                knowledge_base = build_knowledge_base(files_location.replace("Example: ", "") if files_location.startswith("Example: ") else files_location)
+                if files_location != "Example: C:\\Users\\KMK\\Desktop\\SİL\\files" :
+                    knowledge_base = build_knowledge_base(files_location)
                 if knowledge_base: 
                     summary = summarize_collection(knowledge_base)
                     try:
