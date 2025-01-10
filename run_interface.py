@@ -23,7 +23,7 @@ def main_interface():
                 else:
                     try:
                         knowledge_base = build_knowledge_base(files_location)
-                        if knowledge_base:
+                        if knowledge_base is not None: # Explicitly check for None
                             summary = summarize_collection(knowledge_base)
                             try:
                                 # Attempt to split the summary into lines, assuming newline as delimiter
@@ -39,7 +39,9 @@ def main_interface():
                             st.session_state.knowledge_base = knowledge_base
                             status.update(label="Knowledge Base is ready!", state="complete")
                         else:
-                            status.update(label="No documents loaded.", state="error")
+                            status.update(label="No documents loaded or an error occurred during loading.", state="error")
+                            st.sidebar.error("No documents found in the specified directory or an error occurred during loading.") # More informative error message
+
                     except Exception as e:
                         st.sidebar.error(f"An error occurred while loading the knowledge base: {e}")
                         status.update(label=f"Error loading knowledge base: {e}", state="error")
