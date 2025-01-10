@@ -16,7 +16,8 @@ def main_interface():
     # Load knowledge base - moved outside the main loop
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
-            files_location = st.sidebar.text_input("Files Location:", value=r"C:\Users\KMK\Desktop\SİL\files", label="Files Location:")
+            #fix SyntaxError: (unicode error) 'unicodeescape' codec can't decode bytes in position 2-3: truncated \UXXXXXXXX escape in the below command AI!
+            files_location = st.sidebar.text_input("Files Location:", help="C:\Users\KMK\Desktop\SİL\files")
             if not os.path.isdir(files_location):
                 st.sidebar.error("Invalid directory path. Please enter a valid directory.")
             else:
