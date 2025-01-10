@@ -35,15 +35,13 @@ def build_knowledge_base(document_directory_path):
         file_path = os.path.join(document_directory_path, filename)
         file_extension = os.path.splitext(filename)[1]
         
-        document = []
+        document = [] # Initialize as a list
 
         if file_extension in CONFIG['supported_file_types']:
             try:
                 if file_extension == '.txt':
                     with open(file_path, 'r') as file:
-                        document = file.read()
-                    #fix this 'str' object has no attribute 'append' AI!    
-                    document.append(document)
+                        document = [file.read()] # Enclose in a list
                     print(f'\nText document {filename} loaded successfully from {file_path}')
                 elif file_extension == '.pdf':
                     with fitz.open(file_path) as doc:
@@ -77,4 +75,4 @@ def build_knowledge_base(document_directory_path):
 
     print(f'\nKnowledge Based populated by a total number of {chroma_collection.count()} document chunks from {document_directory_path}.')
     return chroma_collection
-    
+    ```
