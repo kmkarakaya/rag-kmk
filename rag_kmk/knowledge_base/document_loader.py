@@ -40,12 +40,17 @@ def build_knowledge_base(document_directory_path):
         if file_extension in CONFIG['supported_file_types']:
             try:
                 if file_extension == '.txt':
-                    # when the .txt file is a very large one this code fails to open and extraxt the content. Can you fix it so that it can handle large .txt files AI!
                     try:
                         with open(file_path, 'r', encoding='utf-8', errors='replace') as file:
-                            text = file.read().strip()
+                            text = ""
+                            chunk_size = 1024 * 1024  # 1MB chunks
+                            while True:
+                                chunk = file.read(chunk_size)
+                                if not chunk:
+                                    break
+                                text += chunk
                             if text:
-                                document.append(text)
+                                document.append(text.strip())
                                 print(f'\nText document {filename} loaded successfully from {file_path}')
                             else:
                                 print(f"\nWarning: Skipping empty or unreadable .txt file: {filename}")
