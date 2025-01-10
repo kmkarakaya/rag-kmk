@@ -8,6 +8,7 @@ from rag_kmk.vector_db import summarize_collection
 from rag_kmk.chat_flow import RAG_LLM, generateAnswer
 import streamlit as st
 import os
+import json
 
 def main_interface():
     st.title("🦜 RAG KMK")
@@ -25,19 +26,21 @@ def main_interface():
                 else:
                     knowledge_base = build_knowledge_base(files_location)
             if knowledge_base: 
-                # summary is a json object such as {    "collection_name": "rag_collection", "document_count": 32,    "documents": [     "SENG472_2024Fall_Syllabus_V5.docx"    ]         } fix the below code so that it prints the sumary beautifully AI!
                 summary = summarize_collection(knowledge_base)
                 try:
-                    # Attempt to split the summary into lines, assuming newline as delimiter
-                    filenames = summary.strip().splitlines()
-                    # Create a bulleted list
-                    formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
+                    summary_data = json.loads(summary)
                     with st.sidebar.expander("Knowledge Base Summary"):
-                        st.markdown(formatted_summary)
-                except AttributeError:
-                    # Handle cases where summary is not a string or doesn't have splitlines
+                        st.markdown(f"**Collection Name:** {summary_data['collection_name']}")
+                        st.markdown(f"**Document Count:** {summary_data['document_count']}")
+                        st.markdown("**Documents:**")
+                        for document in summary_data['documents']:
+                            st.markdown(f"- {document}")
+                except json.JSONDecodeError:
                     with st.sidebar.expander("Knowledge Base Summary"):
-                        st.markdown("Summary not available in the expected format.")
+                        st.markdown("Error decoding summary JSON.")
+                except KeyError as e:
+                    with st.sidebar.expander("Knowledge Base Summary"):
+                        st.markdown(f"Error: Missing key in summary JSON: {e}")
                 st.session_state.knowledge_base = knowledge_base
                 status.update(label="Knowledge Base is ready!", state="complete")
             else:
@@ -47,16 +50,19 @@ def main_interface():
         #If knowledge base already exists, display the summary again.
         summary = summarize_collection(knowledge_base)
         try:
-            # Attempt to split the summary into lines, assuming newline as delimiter
-            filenames = summary.strip().splitlines()
-            # Create a bulleted list
-            formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
+            summary_data = json.loads(summary)
             with st.sidebar.expander("Knowledge Base Summary"):
-                st.markdown(formatted_summary)
-        except AttributeError:
-            # Handle cases where summary is not a string or doesn't have splitlines
+                st.markdown(f"**Collection Name:** {summary_data['collection_name']}")
+                st.markdown(f"**Document Count:** {summary_data['document_count']}")
+                st.markdown("**Documents:**")
+                for document in summary_data['documents']:
+                    st.markdown(f"- {document}")
+        except json.JSONDecodeError:
             with st.sidebar.expander("Knowledge Base Summary"):
-                st.markdown("Summary not available in the expected format.")
+                st.markdown("Error decoding summary JSON.")
+        except KeyError as e:
+            with st.sidebar.expander("Knowledge Base Summary"):
+                st.markdown(f"Error: Missing key in summary JSON: {e}")
 
 
     # Initialize chat history and display chat interface ONLY if knowledge_base exists
