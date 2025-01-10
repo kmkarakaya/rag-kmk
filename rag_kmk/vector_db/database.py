@@ -1,6 +1,7 @@
 from rag_kmk import CONFIG 
 from chromadb import Client, PersistentClient
 from chromadb.utils import embedding_functions
+import json
 
 def create_chroma_client(chromaDB_path=CONFIG["vector_db"]["chromaDB_path"], 
                          collection_name=CONFIG["vector_db"]["collection_name"], 
@@ -36,32 +37,18 @@ def create_chroma_client(chromaDB_path=CONFIG["vector_db"]["chromaDB_path"],
 
 
 def summarize_collection(chroma_collection):
-  #revise the code so that it returns the summary as a json object AI!
-  summary = [] # Initialize summary as a list
-  print("Summarizing the collection...")
-  # Verify collection properties
-  print(f"\t Collection name: {chroma_collection.name}")  # Access the name attribute directly
-  print(f"\t Number of document chunks in collection: {chroma_collection.count()}")
-  summary.append(f"Collection name: {chroma_collection.name}") # Append to the list
-  summary.append(f"Number of document chunks in collection: {chroma_collection.count()}")
-  # Print distinct metadata "document" for each chunk in the collection
-  print("\t Distinct 'document' metadata in the collection:")
-  distinct_documents = set()  # Use a set to store unique document names
+  summary = {} # Initialize summary as a dictionary
+  summary["collection_name"] = chroma_collection.name
+  summary["document_count"] = chroma_collection.count()
+  summary["documents"] = []
 
-  # Iterate over chunks in the collection
+  distinct_documents = set()
   for chunk_id in range(chroma_collection.count()):
-      metadata = chroma_collection.get([str(chunk_id)])['metadatas'][0]  # Get metadata for the chunk
-      document_name = metadata.get("document", "Unknown")  # Get document metadata; default to "Unknown" if not present
-      distinct_documents.add(document_name)  # Add document name to set for uniqueness
+      metadata = chroma_collection.get([str(chunk_id)])['metadatas'][0]
+      document_name = metadata.get("document", "Unknown")
+      distinct_documents.add(document_name)
 
-  # Print all distinct document names
-  summary.append("Documents:")
   for document_name in distinct_documents:
-      print("\t ",document_name)
-      summary.append(document_name) # Append to the list
+      summary["documents"].append(document_name)
 
-  print("Collection summarization completed.")
-
-  # Join the list elements into a single string
-  summary_string = "\n ".join(summary)
-  return summary_string
+  return json.dumps(summary, indent=2)
