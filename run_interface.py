@@ -17,6 +17,7 @@ def main_interface():
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
             files_location = st.sidebar.text_input("Files Location:", help=r"C:\Users\KMK\Desktop\SİL\files")
+            #after entering a valid directory, the below error message is displayed! Normally it should not, because files_location has a valid director. fix that so that the rror msg will not be displayed AI!
             if files_location:
                 if not os.path.isdir(files_location):
                     st.sidebar.error("Invalid directory path. Please enter a valid directory.")
