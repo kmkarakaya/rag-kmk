@@ -40,13 +40,13 @@ def build_knowledge_base(document_directory_path):
         if file_extension in CONFIG['supported_file_types']:
             try:
                 if file_extension == '.txt':
-                    with open(file_path, 'r', encoding='utf-8') as file:
+                    with open(file_path, 'r', encoding='utf-8', errors='replace') as file: #Try UTF-8 first, then replace errors
                         text = file.read().strip() # Read and strip whitespace
                         if text: # Check if text is not empty after stripping
                             document.append(text)
                             print(f'\nText document {filename} loaded successfully from {file_path}')
                         else:
-                            print(f"\nWarning: Skipping empty .txt file: {filename}")
+                            print(f"\nWarning: Skipping empty or unreadable .txt file: {filename}")
 
                 elif file_extension == '.pdf':
                     with fitz.open(file_path) as doc:
@@ -78,7 +78,11 @@ def build_knowledge_base(document_directory_path):
                 files_processed = True # Set flag if processing was successful
                 print(f"Document {filename} added to the collection")
                 print(f"Current number of document chunks in Vector DB: {chroma_collection.count()} ")
-            except (FileNotFoundError, fitz.EmptyFileError, PackageNotFoundError, Exception) as e:
+            except (FileNotFoundError, fitz.EmptyFileError, PackageNotFoundError, UnicodeDecodeError) as e: #Catch UnicodeDecodeError
+                error_messages.append(f"Failed to load document '{filename}': {e}.  Try specifying encoding.")
+                print(f'\nFailed to load document from {file_path}: {e}')
+                continue
+            except Exception as e:
                 error_messages.append(f"Failed to load document '{filename}': {e}")
                 print(f'\nFailed to load document from {file_path}: {e}')
                 continue
