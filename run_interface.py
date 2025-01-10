@@ -17,6 +17,7 @@ def main_interface():
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
             files_location = st.sidebar.text_input("Files Location:", help=r"C:\Users\KMK\Desktop\SİL\files")
+            #even a correct location provided, the error message is  displayed. fix it AI!
             if files_location:
                 if not os.path.isdir(files_location):
                     st.sidebar.error("Invalid directory path. Please enter a valid directory.")
