@@ -40,10 +40,14 @@ def build_knowledge_base(document_directory_path):
         if file_extension in CONFIG['supported_file_types']:
             try:
                 if file_extension == '.txt':
-                    # the .txt file can not be handled correctly I got: Failed to load document from C:\Users\KMK\Desktop\SİL\files\VideoTranscript.txt: Expected IDs to be a non-empty list, got 0 IDs Fix it AI!
                     with open(file_path, 'r', encoding='utf-8') as file:
-                        document.append(file.read()) # Corrected line: append the text directly
-                    print(f'\nText document {filename} loaded successfully from {file_path}')
+                        text = file.read().strip() # Read and strip whitespace
+                        if text: # Check if text is not empty after stripping
+                            document.append(text)
+                            print(f'\nText document {filename} loaded successfully from {file_path}')
+                        else:
+                            print(f"\nWarning: Skipping empty .txt file: {filename}")
+
                 elif file_extension == '.pdf':
                     with fitz.open(file_path) as doc:
                         text = ''
