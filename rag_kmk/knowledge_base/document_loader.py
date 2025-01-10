@@ -40,13 +40,23 @@ def build_knowledge_base(document_directory_path):
         if file_extension in CONFIG['supported_file_types']:
             try:
                 if file_extension == '.txt':
-                    with open(file_path, 'r', encoding='utf-8', errors='replace') as file: #Try UTF-8 first, then replace errors
-                        text = file.read().strip() # Read and strip whitespace
-                        if text: # Check if text is not empty after stripping
-                            document.append(text)
-                            print(f'\nText document {filename} loaded successfully from {file_path}')
-                        else:
-                            print(f"\nWarning: Skipping empty or unreadable .txt file: {filename}")
+                    try:
+                        with open(file_path, 'r', encoding='utf-8', errors='replace') as file:
+                            text = file.read().strip()
+                            if text:
+                                document.append(text)
+                                print(f'\nText document {filename} loaded successfully from {file_path}')
+                            else:
+                                print(f"\nWarning: Skipping empty or unreadable .txt file: {filename}")
+                    except FileNotFoundError:
+                        print(f"Error: File not found: {file_path}")
+                        error_messages.append(f"File not found: {file_path}")
+                    except UnicodeDecodeError:
+                        print(f"Error: Could not decode file {file_path} with UTF-8. Try specifying a different encoding.")
+                        error_messages.append(f"Could not decode file {file_path} with UTF-8.")
+                    except Exception as e:
+                        print(f"An unexpected error occurred while processing {file_path}: {e}")
+                        error_messages.append(f"An unexpected error occurred while processing {file_path}: {e}")
 
                 elif file_extension == '.pdf':
                     with fitz.open(file_path) as doc:
