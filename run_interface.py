@@ -1,5 +1,5 @@
-#pip install rag-kmk
-#pip install streamlit
+#pip install -U rag-kmk
+#pip install -U streamlit
 #streamlit run run_interface.py
 # Ensure that you have a directory ./files with some documents in it.
 
@@ -16,7 +16,8 @@ def main_interface():
     # Load knowledge base - moved outside the main loop
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
-            files_location = st.sidebar.text_input("Files Location:", value=r".\tests\sample_documents") 
+            # Get the files location from the user provide a sample location C:\Users\KMK\Desktop\SİL\files AI!
+            files_location = st.sidebar.text_input("Files Location:", label="C:\Users\KMK\Desktop\SİL\files") 
             if not os.path.isdir(files_location):
                 st.sidebar.error("Invalid directory path. Please enter a valid directory.")
             else:
