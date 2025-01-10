@@ -42,6 +42,7 @@ def build_knowledge_base(document_directory_path):
                 if file_extension == '.txt':
                     with open(file_path, 'r') as file:
                         document = file.read()
+                    #fix this 'str' object has no attribute 'append' AI!    
                     document.append(document)
                     print(f'\nText document {filename} loaded successfully from {file_path}')
                 elif file_extension == '.pdf':
