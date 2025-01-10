@@ -20,27 +20,24 @@ def main_interface():
             if files_location:
                 try:
                     if not os.path.isdir(files_location):
-                        raise ValueError(f"Invalid directory path: {files_location}") # Raise a specific exception
+                        raise ValueError(f"Invalid directory path: {files_location}")
                     knowledge_base = build_knowledge_base(files_location)
-                    if knowledge_base is not None: # Explicitly check for None
+                    if knowledge_base is not None:
                         summary = summarize_collection(knowledge_base)
                         try:
-                            # Attempt to split the summary into lines, assuming newline as delimiter
                             filenames = summary.strip().splitlines()
-                            # Create a bulleted list
                             formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
                             with st.sidebar.expander("Knowledge Base Summary"):
                                 st.markdown(formatted_summary)
                         except AttributeError:
-                            # Handle cases where summary is not a string or doesn't have splitlines
                             with st.sidebar.expander("Knowledge Base Summary"):
                                 st.markdown("Summary not available in the expected format.")
                         st.session_state.knowledge_base = knowledge_base
                         status.update(label="Knowledge Base is ready!", state="complete")
                     else:
                         status.update(label="No documents loaded or an error occurred during loading.", state="error")
-                        st.sidebar.error("No documents found in the specified directory or an error occurred during loading.") # More informative error message
-                except (ValueError, OSError, Exception) as e: # Catch more specific exceptions
+                        st.sidebar.error("No documents found in the specified directory or an error occurred during loading.")
+                except (ValueError, OSError, Exception) as e:
                     st.sidebar.error(f"An error occurred while loading the knowledge base: {e}")
                     status.update(label=f"Error loading knowledge base: {e}", state="error")
                 except Exception as e:
@@ -48,17 +45,13 @@ def main_interface():
                     status.update(label=f"An unexpected error occurred: {e}", state="error")
 
     else:
-        #If knowledge base already exists, display the summary again.
         summary = summarize_collection(st.session_state.knowledge_base)
         try:
-            # Attempt to split the summary into lines, assuming newline as delimiter
             filenames = summary.strip().splitlines()
-            # Create a bulleted list
             formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
             with st.sidebar.expander("Knowledge Base Summary"):
                 st.markdown(formatted_summary)
         except AttributeError:
-            # Handle cases where summary is not a string or doesn't have splitlines
             with st.sidebar.expander("Knowledge Base Summary"):
                 st.markdown("Summary not available in the expected format.")
 

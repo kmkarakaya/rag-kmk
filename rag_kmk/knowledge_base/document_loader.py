@@ -17,32 +17,29 @@ def build_knowledge_base(document_directory_path):
     - directory_path (str): The path to the directory containing the document to be loaded.
 
     Returns:
-    - list: A list of document contents as strings.
+    - chroma_collection: The chroma collection object, or None if no documents were processed successfully.
     """
 
-    #chroma_client, chroma_collection = create_chroma_client(CONFIG["vector_db"]["chromaDB_path"])
     chroma_client, chroma_collection = create_chroma_client()
-    
     current_id = chroma_collection.count()
     print(f"Current Number of Document Chunks in Vector DB : {current_id}")
 
-
     if not os.path.isdir(document_directory_path):
         print(f'{document_directory_path} is not a directory.')
-        return None # Explicitly return None if the path is invalid
+        return None
 
+    files_processed = False # Flag to track if any files were processed successfully
 
     for filename in os.listdir(document_directory_path):
         file_path = os.path.join(document_directory_path, filename)
         file_extension = os.path.splitext(filename)[1]
-        
-        document = [] # Initialize as a list
+        document = []
 
         if file_extension in CONFIG['supported_file_types']:
             try:
                 if file_extension == '.txt':
-                    with open(file_path, 'r', encoding='utf-8') as file: # Added encoding
-                        document = [file.read()] # Enclose in a list
+                    with open(file_path, 'r', encoding='utf-8') as file:
+                        document = [file.read()]
                     print(f'\nText document {filename} loaded successfully from {file_path}')
                 elif file_extension == '.pdf':
                     with fitz.open(file_path) as doc:
@@ -57,25 +54,22 @@ def build_knowledge_base(document_directory_path):
                     document.append(text)
                     print(f'\nDOCX document {filename} loaded successfully from {file_path}')
 
-                print(f"Processing the document {filename} to add to the {chroma_collection.name} collection")
-                print(f"Current number of document chunks in Vector DB: {chroma_collection.count()} ")
                 text_chunksinChar = convert_Pages_ChunkinChar(document)
                 text_chunksinTokens = convert_Chunk_Token(text_chunksinChar)
-                ids,metadatas = add_meta_data(text_chunksinTokens,filename, current_id)
-                current_id = current_id + len(text_chunksinTokens)
+                ids, metadatas = add_meta_data(text_chunksinTokens, filename, current_id)
+                current_id += len(text_chunksinTokens)
                 chroma_collection = add_document_to_collection(ids, metadatas, text_chunksinTokens, chroma_collection)
+                files_processed = True # Set flag if processing was successful
                 print(f"Document {filename} added to the collection")
                 print(f"Current number of document chunks in Vector DB: {chroma_collection.count()} ")
-                
 
-                
-            except (FileNotFoundError, fitz.fitz.EmptyFileError, PackageNotFoundError, Exception) as e: # More specific exception handling
+            except (FileNotFoundError, fitz.fitz.EmptyFileError, PackageNotFoundError, Exception) as e:
                 print(f'\nFailed to load document from {file_path}: {e}')
-                #Consider adding more sophisticated logging here.
-                continue #Skip to the next file instead of halting execution.
+                continue
+
         else:
             print(f'\nSkipping unsupported file type: {file_path}')
 
     print(f'\nKnowledge Based populated by a total number of {chroma_collection.count()} document chunks from {document_directory_path}.')
-    return chroma_collection
+    return chroma_collection if files_processed else None # Return None if no files were processed
 
