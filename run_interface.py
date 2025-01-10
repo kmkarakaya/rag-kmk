@@ -23,6 +23,9 @@ def main():
                 summary = summarize_collection(knowledge_base)
                 with st.sidebar.expander("Knowledge Base Summary"):
                     st.write(f"Knowledge base summary:\n{summary}")
+                st.success("Knowledge base built successfully!") #added welcome message
+                st.write("Welcome! Ask your questions.") #added welcome message
+
         except FileNotFoundError:
             st.error(f"An error occurred: Directory not found: {files_location}")
             logging.exception(f"A critical error occurred: Directory not found: {files_location}")
