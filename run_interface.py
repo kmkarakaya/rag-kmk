@@ -16,8 +16,10 @@ def main_interface():
     # Load knowledge base - moved outside the main loop
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
-            files_location = st.sidebar.text_input("Files Location:", help=r"C:\Users\KMK\Desktop\SİL\files")
-            if files_location:
+            default_path = r"C:\Users\KMK\Desktop\SİL\files" # Define default path
+            files_location = st.sidebar.text_input("Files Location:", value=default_path, help="Enter the path to your files directory.") # Set default value
+
+            if files_location: # Check if a path has been entered
                 try:
                     if not os.path.isdir(files_location):
                         raise ValueError(f"Invalid directory path: {files_location}")
