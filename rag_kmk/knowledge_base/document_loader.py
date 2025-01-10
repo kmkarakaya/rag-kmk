@@ -23,10 +23,10 @@ def build_knowledge_base(document_directory_path):
     chroma_client, chroma_collection = create_chroma_client()
     current_id = chroma_collection.count()
     print(f"Current Number of Document Chunks in Vector DB : {current_id}")
-    # when I provided C:\Users\KMK\Desktop\SİL\file path, it gave me an error AI!
+
+    # Check if the provided path is a directory.  If not, raise a ValueError with a helpful message.
     if not os.path.isdir(document_directory_path):
-        print(f'{document_directory_path} is not a directory.')
-        return None
+        raise ValueError(f"Invalid directory path: '{document_directory_path}'. Please provide a valid directory.")
 
     files_processed = False # Flag to track if any files were processed successfully
     error_messages = [] # Collect error messages for all failed files
