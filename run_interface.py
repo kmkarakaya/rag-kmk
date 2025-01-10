@@ -8,8 +8,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def main():
     st.title("Simplified RAG KMK")
-#create a lsft side bar with a title Configure and place the below code inside the sidebar AI!
-    files_location = st.text_input("Files Location:", help="Enter the path to your files directory.")
+    with st.sidebar:
+        st.header("Configure")
+        files_location = st.text_input("Files Location:", help="Enter the path to your files directory.")
 
     if files_location:
         try:
