@@ -75,4 +75,3 @@ def build_knowledge_base(document_directory_path):
 
     print(f'\nKnowledge Based populated by a total number of {chroma_collection.count()} document chunks from {document_directory_path}.')
     return chroma_collection
-    ```
