@@ -19,6 +19,7 @@ def main_interface():
         knowledge_base = None # Initialize knowledge_base
         with st.status("Wait: Loading knowledge base...") as status:
             files_location = st.sidebar.text_input("Files Location:", value="Example: C:\\Users\\KMK\\Desktop\\SİL\\files") 
+            #explain the next if stm AI!
             if files_location and files_location != "Example: C:\\Users\\KMK\\Desktop\\SİL\\files":
                 files_location = files_location.replace("Example: ", "") #remove example prefix
                 if not os.path.isdir(files_location):
