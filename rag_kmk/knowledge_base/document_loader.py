@@ -23,7 +23,7 @@ def build_knowledge_base(document_directory_path):
     chroma_client, chroma_collection = create_chroma_client()
     current_id = chroma_collection.count()
     print(f"Current Number of Document Chunks in Vector DB : {current_id}")
-
+    # when I provided C:\Users\KMK\Desktop\SİL\file path, it gave me an error AI!
     if not os.path.isdir(document_directory_path):
         print(f'{document_directory_path} is not a directory.')
         return None
