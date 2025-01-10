@@ -1,6 +1,7 @@
 import os
 import fitz  # PyMuPDF
-from docx import Document
+#from docx import Document
+import docx2txt
 from docx.opc.exceptions import PackageNotFoundError
 from rag_kmk import CONFIG
 from rag_kmk.knowledge_base.text_splitter import convert_Pages_ChunkinChar, convert_Chunk_Token, add_meta_data, add_document_to_collection
@@ -39,6 +40,7 @@ def build_knowledge_base(document_directory_path):
         if file_extension in CONFIG['supported_file_types']:
             try:
                 if file_extension == '.txt':
+                    #the following code does not exract the text form .txt file. Fix it AI!
                     with open(file_path, 'r', encoding='utf-8') as file:
                         document = [file.read()]
                     print(f'\nText document {filename} loaded successfully from {file_path}')
@@ -51,7 +53,6 @@ def build_knowledge_base(document_directory_path):
                     print(f'\nPDF document {filename} loaded successfully from {file_path}')
                 elif file_extension == '.docx':
                     try:
-                        import docx2txt
                         text = docx2txt.process(file_path)
                         document.append(text)
                         if not text:
