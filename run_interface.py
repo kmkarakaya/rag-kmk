@@ -17,11 +17,20 @@ def main_interface():
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
             files_location = st.sidebar.text_input("Files Location:", help="Enter the path to your files directory.") 
-
             if files_location: # Check if a path has been entered
                 try:
                     if not os.path.isdir(files_location):
-                        raise ValueError(f"Invalid directory path: {files_location}")
+                        #Improved error message
+                        st.sidebar.error(f"Invalid directory path: '{files_location}'. Please enter a valid directory path.  The path must point to a directory containing your files.")
+                        status.update(label=f"Error: Invalid directory path.", state="error")
+                        continue #Skip the rest of the loop if the path is invalid
+                    
+                    #Check if the directory is empty
+                    if not os.listdir(files_location):
+                        st.sidebar.error(f"The directory '{files_location}' is empty. Please select a directory containing files.")
+                        status.update(label=f"Error: Empty directory.", state="error")
+                        continue
+
                     knowledge_base = build_knowledge_base(files_location)
                     if knowledge_base is not None:
                         summary = summarize_collection(knowledge_base)
