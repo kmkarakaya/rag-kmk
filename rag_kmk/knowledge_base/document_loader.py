@@ -50,14 +50,20 @@ def build_knowledge_base(document_directory_path):
                         document.append(text)
                     print(f'\nPDF document {filename} loaded successfully from {file_path}')
                 elif file_extension == '.docx':
-                    doc = Document(file_path)
-                    text = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
-                    document.append(text)
-                    #Added test to verify docx extraction
-                    if not text:
-                        raise ValueError(f"No text extracted from {filename}")
-                    print(f'\nDOCX document {filename} has {len(doc.paragraphs)} paragraphs and text is [{text}]')
-                    print(f'\nDOCX document {filename} loaded successfully from {file_path}')
+                    try:
+                        import docx2txt
+                        text = docx2txt.process(file_path)
+                        document.append(text)
+                        if not text:
+                            raise ValueError(f"No text extracted from {filename}")
+                        print(f"\nDOCX document '{filename}' loaded successfully from '{file_path}'. Text length: {len(text)} characters.")
+                    except ImportError:
+                        print(f"Error: docx2txt library not found. Please install it using 'pip install docx2txt'. Skipping '{filename}'.")
+                        continue
+                    except Exception as e:
+                        error_messages.append(f"Failed to load document '{filename}': {e}")
+                        print(f"\nFailed to load document from '{file_path}': {e}")
+                        continue
 
                 text_chunksinChar = convert_Pages_ChunkinChar(document)
                 text_chunksinTokens = convert_Chunk_Token(text_chunksinChar)
