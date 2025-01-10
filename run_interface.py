@@ -15,30 +15,31 @@ def main_interface():
 
     # Load knowledge base - moved outside the main loop
     if "knowledge_base" not in st.session_state :
+        knowledge_base = None # Initialize knowledge_base
         with st.status("Wait: Loading knowledge base...") as status:
             files_location = st.sidebar.text_input("Files Location:", value="Example: C:\\Users\\KMK\\Desktop\\SİL\\files") 
-            if files_location and files_location != "Example: C:\\Users\\KMK\\Desktop\\SİL\\files" and not os.path.isdir(files_location):
-                st.sidebar.error("Invalid directory path. Please enter a valid directory.")
-            else:
-                if files_location != "Example: C:\\Users\\KMK\\Desktop\\SİL\\files" :
-                    knowledge_base = build_knowledge_base(files_location)
-                if knowledge_base: 
-                    summary = summarize_collection(knowledge_base)
-                    try:
-                        # Attempt to split the summary into lines, assuming newline as delimiter
-                        filenames = summary.strip().splitlines()
-                        # Create a bulleted list
-                        formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
-                        with st.sidebar.expander("Knowledge Base Summary"):
-                            st.markdown(formatted_summary)
-                    except AttributeError:
-                        # Handle cases where summary is not a string or doesn't have splitlines
-                        with st.sidebar.expander("Knowledge Base Summary"):
-                            st.markdown("Summary not available in the expected format.")
-                    st.session_state.knowledge_base = knowledge_base
-                    status.update(label="Knowledge Base is ready!", state="complete")
+            if files_location and files_location != "Example: C:\\Users\\KMK\\Desktop\\SİL\\files":
+                if not os.path.isdir(files_location):
+                    st.sidebar.error("Invalid directory path. Please enter a valid directory.")
                 else:
-                    status.update(label="No documents loaded.", state="error")
+                    knowledge_base = build_knowledge_base(files_location.replace("Example: ", ""))
+            if knowledge_base: 
+                summary = summarize_collection(knowledge_base)
+                try:
+                    # Attempt to split the summary into lines, assuming newline as delimiter
+                    filenames = summary.strip().splitlines()
+                    # Create a bulleted list
+                    formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
+                    with st.sidebar.expander("Knowledge Base Summary"):
+                        st.markdown(formatted_summary)
+                except AttributeError:
+                    # Handle cases where summary is not a string or doesn't have splitlines
+                    with st.sidebar.expander("Knowledge Base Summary"):
+                        st.markdown("Summary not available in the expected format.")
+                st.session_state.knowledge_base = knowledge_base
+                status.update(label="Knowledge Base is ready!", state="complete")
+            else:
+                status.update(label="No documents loaded.", state="error")
     else:
         #If knowledge base already exists, display the summary again.
         summary = summarize_collection(st.session_state.knowledge_base)
