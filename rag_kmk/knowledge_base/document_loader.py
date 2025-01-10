@@ -53,7 +53,6 @@ def build_knowledge_base(document_directory_path):
                     doc = Document(file_path)
                     text = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
                     document.append(text)
-                    # document text has an empty list [    ]. So, no text exraxted from docx file.AI!
                     #Added test to verify docx extraction
                     if not text:
                         raise ValueError(f"No text extracted from {filename}")
