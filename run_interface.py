@@ -23,7 +23,7 @@ def main_interface():
                 else:
                     knowledge_base = build_knowledge_base(files_location)
                     if knowledge_base:
-                    summary = summarize_collection(knowledge_base)
+                        summary = summarize_collection(knowledge_base)
                     try:
                         # Attempt to split the summary into lines, assuming newline as delimiter
                         filenames = summary.strip().splitlines()
