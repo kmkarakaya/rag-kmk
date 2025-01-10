@@ -50,9 +50,11 @@ def build_knowledge_base(document_directory_path):
                         document.append(text)
                     print(f'\nPDF document {filename} loaded successfully from {file_path}')
                 elif file_extension == '.docx':
+                   # check that the code return the content of a docx file as text AI!
                     doc = Document(file_path)
                     text = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
                     document.append(text)
+                    print(f'\nDOCX document {filename} has {len(doc.paragraphs)} paragraphs and text is [{text}]')
                     print(f'\nDOCX document {filename} loaded successfully from {file_path}')
 
                 text_chunksinChar = convert_Pages_ChunkinChar(document)
@@ -63,7 +65,7 @@ def build_knowledge_base(document_directory_path):
                 files_processed = True # Set flag if processing was successful
                 print(f"Document {filename} added to the collection")
                 print(f"Current number of document chunks in Vector DB: {chroma_collection.count()} ")
-            except (FileNotFoundError, fitz.fitz.EmptyFileError, PackageNotFoundError, Exception) as e:
+            except (FileNotFoundError, fitz.EmptyFileError, PackageNotFoundError, Exception) as e:
                 error_messages.append(f"Failed to load document '{filename}': {e}")
                 print(f'\nFailed to load document from {file_path}: {e}')
                 continue
