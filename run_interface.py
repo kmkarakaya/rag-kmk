@@ -1,7 +1,7 @@
 #pip install rag-kmk
 #pip install streamlit
 #streamlit run run_interface.py
-# Ensure that you have a directory ./files with some documents in it.
+# Ensure that you have a directory with some documents in it.
 
 from rag_kmk.knowledge_base import build_knowledge_base  
 from rag_kmk.vector_db import summarize_collection 
@@ -9,7 +9,7 @@ from rag_kmk.chat_flow import RAG_LLM, generateAnswer
 import streamlit as st
 import os
 import json
-
+#go over the comments and improve them if necessary. remove the unnecessary ones AI!
 def main_interface():
     st.title("🦜 RAG KMK")
     st.sidebar.title("CONFIG") # Add sidebar title
