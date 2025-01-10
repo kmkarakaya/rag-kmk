@@ -1,5 +1,6 @@
 import streamlit as st
 import logging
+import os
 from rag_kmk.knowledge_base import build_knowledge_base
 from rag_kmk.vector_db import summarize_collection
 
@@ -12,13 +13,17 @@ def main():
 
     if files_location:
         try:
+            # Convert user input to absolute path
+            abs_path = os.path.abspath(files_location)
             with st.spinner("Loading knowledge base..."):
-                # files_location must be a path not just a string. fix that AI!
-                knowledge_base = build_knowledge_base(files_location)
+                knowledge_base = build_knowledge_base(abs_path)
                 if knowledge_base is None:
                     raise ValueError("Failed to build knowledge base.")
                 summary = summarize_collection(knowledge_base)
                 st.write(f"Knowledge base summary:\n{summary}")
+        except FileNotFoundError:
+            st.error(f"An error occurred: Directory not found: {files_location}")
+            logging.exception(f"A critical error occurred: Directory not found: {files_location}")
         except Exception as e:
             st.error(f"An error occurred: {e}")
             logging.exception(f"A critical error occurred: {e}")
