@@ -63,7 +63,6 @@ def build_knowledge_base(document_directory_path):
                 files_processed = True # Set flag if processing was successful
                 print(f"Document {filename} added to the collection")
                 print(f"Current number of document chunks in Vector DB: {chroma_collection.count()} ")
-            # ERROR - A critical error occurred: module 'fitz' has no attribute 'fitz' AI!
             except (FileNotFoundError, fitz.fitz.EmptyFileError, PackageNotFoundError, Exception) as e:
                 error_messages.append(f"Failed to load document '{filename}': {e}")
                 print(f'\nFailed to load document from {file_path}: {e}')
