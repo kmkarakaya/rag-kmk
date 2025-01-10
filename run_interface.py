@@ -25,6 +25,7 @@ def main_interface():
                 else:
                     knowledge_base = build_knowledge_base(files_location)
             if knowledge_base: 
+                # summary is a json object such as {    "collection_name": "rag_collection", "document_count": 32,    "documents": [     "SENG472_2024Fall_Syllabus_V5.docx"    ]         } fix the below code so that it prints the sumary beautifully AI!
                 summary = summarize_collection(knowledge_base)
                 try:
                     # Attempt to split the summary into lines, assuming newline as delimiter
