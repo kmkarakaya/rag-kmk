@@ -1,6 +1,7 @@
 import os
 import fitz  # PyMuPDF
 from docx import Document
+from docx.opc.exceptions import PackageNotFoundError
 from rag_kmk import CONFIG
 from rag_kmk.knowledge_base.text_splitter import convert_Pages_ChunkinChar, convert_Chunk_Token, add_meta_data, add_document_to_collection
 from rag_kmk.vector_db import create_chroma_client
@@ -28,8 +29,8 @@ def build_knowledge_base(document_directory_path):
 
     if not os.path.isdir(document_directory_path):
         print(f'{document_directory_path} is not a directory.')
-        return
-        
+        return None # Explicitly return None if the path is invalid
+
 
     for filename in os.listdir(document_directory_path):
         file_path = os.path.join(document_directory_path, filename)
@@ -40,7 +41,7 @@ def build_knowledge_base(document_directory_path):
         if file_extension in CONFIG['supported_file_types']:
             try:
                 if file_extension == '.txt':
-                    with open(file_path, 'r') as file:
+                    with open(file_path, 'r', encoding='utf-8') as file: # Added encoding
                         document = [file.read()] # Enclose in a list
                     print(f'\nText document {filename} loaded successfully from {file_path}')
                 elif file_extension == '.pdf':
@@ -48,7 +49,7 @@ def build_knowledge_base(document_directory_path):
                         text = ''
                         for page in doc:
                             text += page.get_text()
-                    document.append(text)
+                        document.append(text)
                     print(f'\nPDF document {filename} loaded successfully from {file_path}')
                 elif file_extension == '.docx':
                     doc = Document(file_path)
@@ -68,10 +69,13 @@ def build_knowledge_base(document_directory_path):
                 
 
                 
-            except Exception as e:
+            except (FileNotFoundError, fitz.fitz.EmptyFileError, PackageNotFoundError, Exception) as e: # More specific exception handling
                 print(f'\nFailed to load document from {file_path}: {e}')
+                #Consider adding more sophisticated logging here.
+                continue #Skip to the next file instead of halting execution.
         else:
             print(f'\nSkipping unsupported file type: {file_path}')
 
     print(f'\nKnowledge Based populated by a total number of {chroma_collection.count()} document chunks from {document_directory_path}.')
     return chroma_collection
+
