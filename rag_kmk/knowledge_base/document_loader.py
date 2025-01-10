@@ -50,10 +50,12 @@ def build_knowledge_base(document_directory_path):
                         document.append(text)
                     print(f'\nPDF document {filename} loaded successfully from {file_path}')
                 elif file_extension == '.docx':
-                   # check that the code return the content of a docx file as text AI!
                     doc = Document(file_path)
                     text = '\n'.join([paragraph.text for paragraph in doc.paragraphs])
                     document.append(text)
+                    #Added test to verify docx extraction
+                    if not text:
+                        raise ValueError(f"No text extracted from {filename}")
                     print(f'\nDOCX document {filename} has {len(doc.paragraphs)} paragraphs and text is [{text}]')
                     print(f'\nDOCX document {filename} loaded successfully from {file_path}')
 
