@@ -17,29 +17,33 @@ def main_interface():
     if "knowledge_base" not in st.session_state :
         with st.status("Wait: Loading knowledge base...") as status:
             files_location = st.sidebar.text_input("Files Location:", help=r"C:\Users\KMK\Desktop\SİL\files")
-            #even a correct location provided, the error message is  displayed. fix it AI!
             if files_location:
                 if not os.path.isdir(files_location):
                     st.sidebar.error("Invalid directory path. Please enter a valid directory.")
                 else:
-                    knowledge_base = build_knowledge_base(files_location)
-                    if knowledge_base:
-                        summary = summarize_collection(knowledge_base)
-                        try:
-                            # Attempt to split the summary into lines, assuming newline as delimiter
-                            filenames = summary.strip().splitlines()
-                            # Create a bulleted list
-                            formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
-                            with st.sidebar.expander("Knowledge Base Summary"):
-                                st.markdown(formatted_summary)
-                        except AttributeError:
-                            # Handle cases where summary is not a string or doesn't have splitlines
-                            with st.sidebar.expander("Knowledge Base Summary"):
-                                st.markdown("Summary not available in the expected format.")
-                        st.session_state.knowledge_base = knowledge_base
-                        status.update(label="Knowledge Base is ready!", state="complete")
-                    else:
-                        status.update(label="No documents loaded.", state="error")
+                    try:
+                        knowledge_base = build_knowledge_base(files_location)
+                        if knowledge_base:
+                            summary = summarize_collection(knowledge_base)
+                            try:
+                                # Attempt to split the summary into lines, assuming newline as delimiter
+                                filenames = summary.strip().splitlines()
+                                # Create a bulleted list
+                                formatted_summary = "\n".join([f"- {filename}" for filename in filenames])
+                                with st.sidebar.expander("Knowledge Base Summary"):
+                                    st.markdown(formatted_summary)
+                            except AttributeError:
+                                # Handle cases where summary is not a string or doesn't have splitlines
+                                with st.sidebar.expander("Knowledge Base Summary"):
+                                    st.markdown("Summary not available in the expected format.")
+                            st.session_state.knowledge_base = knowledge_base
+                            status.update(label="Knowledge Base is ready!", state="complete")
+                        else:
+                            status.update(label="No documents loaded.", state="error")
+                    except Exception as e:
+                        st.sidebar.error(f"An error occurred while loading the knowledge base: {e}")
+                        status.update(label=f"Error loading knowledge base: {e}", state="error")
+
     else:
         #If knowledge base already exists, display the summary again.
         summary = summarize_collection(st.session_state.knowledge_base)
