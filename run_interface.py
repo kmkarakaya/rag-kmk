@@ -19,6 +19,7 @@ def main_interface():
         with st.status("Wait: Loading knowledge base...") as status:
             files_location = st.sidebar.text_input("Files Location:", value="Example: C:\\Users\\KMK\\Desktop\\SİL\\files") 
             if files_location and files_location != "Example: C:\\Users\\KMK\\Desktop\\SİL\\files":
+                files_location = files_location.replace("Example: ", "") #remove example prefix
                 if not os.path.isdir(files_location):
                     st.sidebar.error("Invalid directory path. Please enter a valid directory.")
                 else:
@@ -41,8 +42,9 @@ def main_interface():
             else:
                 status.update(label="No documents loaded.", state="error")
     else:
+        knowledge_base = st.session_state.knowledge_base
         #If knowledge base already exists, display the summary again.
-        summary = summarize_collection(st.session_state.knowledge_base)
+        summary = summarize_collection(knowledge_base)
         try:
             # Attempt to split the summary into lines, assuming newline as delimiter
             filenames = summary.strip().splitlines()
@@ -56,29 +58,31 @@ def main_interface():
                 st.markdown("Summary not available in the expected format.")
 
 
-    # Initialize chat history
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    # Initialize chat history and display chat interface ONLY if knowledge_base exists
+    if knowledge_base:
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
 
-    # Display chat messages from history on app rerun
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+        # Display chat messages from history on app rerun
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
 
-    # React to user input
-    if prompt := st.chat_input("Write your query here..."):
-        # Display user message in chat message container
-        st.chat_message("user").markdown(prompt)
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        # React to user input
+        if prompt := st.chat_input("Write your query here..."):
+            # Display user message in chat message container
+            st.chat_message("user").markdown(prompt)
+            # Add user message to chat history
+            st.session_state.messages.append({"role": "user", "content": prompt})
 
-        response = generateAnswer(RAG_LLM, st.session_state.knowledge_base, prompt)
+            response = generateAnswer(RAG_LLM, knowledge_base, prompt)
 
-        # Display assistant response in chat message container
-        with st.chat_message("assistant"):
-            st.markdown(response)
-        # Add assistant response to chat history
-        st.session_state.messages.append({"role": "assistant", "content": response})
+            # Display assistant response in chat message container
+            with st.chat_message("assistant"):
+                st.markdown(response)
+            # Add assistant response to chat history
+            st.session_state.messages.append({"role": "assistant", "content": response})
+
 
 
 if __name__ == "__main__":
