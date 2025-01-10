@@ -8,17 +8,17 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def main():
     st.title("Simplified RAG KMK")
-
+#create a lsft side bar with a title Configure and place the below code inside the sidebar AI!
     files_location = st.text_input("Files Location:", help="Enter the path to your files directory.")
 
     if files_location:
         try:
             # Convert user input to absolute path
             abs_path = os.path.abspath(files_location)
-            with st.spinner("Loading knowledge base..."):
+            with st.spinner("Loading knowledge base from"+abs_path):
                 knowledge_base = build_knowledge_base(abs_path)
                 if knowledge_base is None:
-                    raise ValueError("Failed to build knowledge base.")
+                    raise ValueError("Failed to build knowledge base from"+ abs_path)
                 summary = summarize_collection(knowledge_base)
                 st.write(f"Knowledge base summary:\n{summary}")
         except FileNotFoundError:
