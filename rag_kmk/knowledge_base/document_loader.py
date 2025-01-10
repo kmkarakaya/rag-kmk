@@ -39,6 +39,7 @@ def build_knowledge_base(document_directory_path):
 
         if file_extension in CONFIG['supported_file_types']:
             try:
+                #even the .txt file is not emplty the error msg is received Warning: Skipping empty .txt file: VideoTranscript.txt Fix it AI!
                 if file_extension == '.txt':
                     with open(file_path, 'r', encoding='utf-8') as file:
                         text = file.read().strip() # Read and strip whitespace
