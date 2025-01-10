@@ -40,9 +40,8 @@ def build_knowledge_base(document_directory_path):
         if file_extension in CONFIG['supported_file_types']:
             try:
                 if file_extension == '.txt':
-                    #the following code does not exract the text form .txt file. Fix it AI!
                     with open(file_path, 'r', encoding='utf-8') as file:
-                        document = [file.read()]
+                        document.append(file.read()) # Corrected line: append the text directly
                     print(f'\nText document {filename} loaded successfully from {file_path}')
                 elif file_extension == '.pdf':
                     with fitz.open(file_path) as doc:
