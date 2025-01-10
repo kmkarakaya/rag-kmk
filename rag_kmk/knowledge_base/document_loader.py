@@ -29,6 +29,7 @@ def build_knowledge_base(document_directory_path):
         return None
 
     files_processed = False # Flag to track if any files were processed successfully
+    error_messages = [] # Collect error messages for all failed files
 
     for filename in os.listdir(document_directory_path):
         file_path = os.path.join(document_directory_path, filename)
@@ -64,6 +65,7 @@ def build_knowledge_base(document_directory_path):
                 print(f"Current number of document chunks in Vector DB: {chroma_collection.count()} ")
 
             except (FileNotFoundError, fitz.fitz.EmptyFileError, PackageNotFoundError, Exception) as e:
+                error_messages.append(f"Failed to load document '{filename}': {e}")
                 print(f'\nFailed to load document from {file_path}: {e}')
                 continue
 
@@ -71,5 +73,11 @@ def build_knowledge_base(document_directory_path):
             print(f'\nSkipping unsupported file type: {file_path}')
 
     print(f'\nKnowledge Based populated by a total number of {chroma_collection.count()} document chunks from {document_directory_path}.')
-    return chroma_collection if files_processed else None # Return None if no files were processed
+    if not files_processed:
+        return None
+    if error_messages:
+        print("\nErrors encountered during processing:")
+        for msg in error_messages:
+            print(msg)
+    return chroma_collection
 
