@@ -40,6 +40,7 @@ def build_knowledge_base(document_directory_path):
         if file_extension in CONFIG['supported_file_types']:
             try:
                 if file_extension == '.txt':
+                    # when the .txt file is a very large one this code fails to open and extraxt the content. Can you fix it so that it can handle large .txt files AI!
                     try:
                         with open(file_path, 'r', encoding='utf-8', errors='replace') as file:
                             text = file.read().strip()
