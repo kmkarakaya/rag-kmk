@@ -11,7 +11,7 @@ vector_db:
 # LLM Configuration
 llm:
   type: "gemini"
-  model: "gemini-pro"  # or whichever Gemini model you're using
+  model: "gemini-1.5-flash-latest"  # or whichever Gemini model you're using
   settings:
     temperature: 0.7
     max_output_tokens: 1024

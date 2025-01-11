@@ -18,10 +18,10 @@ def main_interface():
     if "knowledge_base" not in st.session_state :
         knowledge_base = None # Initialize knowledge_base
         with st.status("Wait: Loading knowledge base...") as status:
-            files_location = st.sidebar.text_input("Files Location:", value="Example: C:\\Users\\KMK\\Desktop\\SİL\\files") 
+            files_location = st.sidebar.text_input("Files Location:") 
             
-            if files_location and files_location != "Example: C:\\Users\\KMK\\Desktop\\SİL\\files":
-                files_location = files_location.replace("Example: ", "") #remove example prefix
+            if files_location:
+                
                 if not os.path.isdir(files_location):
                     st.sidebar.error("Invalid directory path. Please enter a valid directory.")
                 else:

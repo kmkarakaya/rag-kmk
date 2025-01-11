@@ -13,18 +13,18 @@ def main():
     global RAG_LLM
     RAG_LLM = build_chatBot()
     
-    # # Load the documents
-    # knowledge_base= build_knowledge_base(r'.\tests\sample_documents') 
-    # print("-----------------"*4)
-    # print(CONFIG)    
+    # Load the documents
+    knowledge_base= build_knowledge_base(r'.\tests\sample_documents') 
+    print("-----------------"*4)
+    print(CONFIG)    
 
-    # print("-----------------"*4)  
-    # # Summarize the collection
-    # if knowledge_base:
-    #     summarize_collection(knowledge_base)
-    #     run_rag_pipeline(RAG_LLM,knowledge_base)
-    # else:
-    #     print("No documents loaded.")
+    print("-----------------"*4)  
+    # Summarize the collection
+    if knowledge_base:
+        summarize_collection(knowledge_base)
+        run_rag_pipeline(RAG_LLM,knowledge_base)
+    else:
+        print("No documents loaded.")
     print("-----------------"*4)
     
 

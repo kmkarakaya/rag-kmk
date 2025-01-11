@@ -2,7 +2,7 @@ import google.generativeai as genai
 from rag_kmk.vector_db import retrieve_chunks
 import os
 import requests
-
+from rag_kmk import CONFIG   
 
 
 def verify_api_key(api_key):
@@ -33,15 +33,6 @@ def verify_api_key(api_key):
     except requests.RequestException:
         print("Error making the request.")
         return False
-
-
-
-
-
-
-
-
-
 
 def check_environment_variables():
     GEMINI_API_KEY=None    
@@ -127,11 +118,15 @@ def get_API_key():
      '''
     
 
-def build_chatBot(system_instruction):
+def build_chatBot():
   # Retrieve GOOGLE_API_KEY from system environment variables
   gemini_api_key = get_API_key()
   genai.configure(api_key=gemini_api_key)  
-  model = genai.GenerativeModel('gemini-1.5-flash-latest', system_instruction=system_instruction)
+  # Access the system_prompt value
+  system_prompt = CONFIG['llm']['settings']['system_prompt']
+  model=CONFIG['llm']['model']
+  print("Building the chatbot with the model: ", model)
+  model = genai.GenerativeModel(model, system_instruction=system_prompt)
   chat = model.start_chat(history=[])
   return chat
 
