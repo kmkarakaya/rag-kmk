@@ -17,6 +17,17 @@ def retrieve_chunks(chroma_collection, query, n_results=5,
             n_results=n_results)
 
     if return_only_docs:
+        for i, doc in enumerate(results['documents'][0]):
+            print(f"Document {i+1}:")
+            print("\tDocument Text: ")
+            print(doc)
+            print(f"\tDocument Source: {results['metadatas'][0][i]['document']}")
+            print(f"\tDocument Source Type: {results['metadatas'][0][i]['category']}")
+            print(f"\tDocument Distance: {results['distances'][0][i]}")
+        
+        if len(results['documents'][0]) == 0:
+            print("No results found.")
+            
         return results['documents'][0]
     else:
         return results

@@ -2,7 +2,7 @@
 # Vector Database Configuration
 vector_db:
   type: "chromadb"
-  chromaDB_path: # "./chroma_db"
+  chromaDB_path: "./chroma_db"
   collection_name: "rag_collection"
   embedding_model: "distiluse-base-multilingual-cased-v2"
   tokens_per_chunk: 128
