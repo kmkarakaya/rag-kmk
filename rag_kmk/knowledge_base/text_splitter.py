@@ -32,6 +32,7 @@ def add_document_to_collection(ids, metadatas, text_chunksinTokens, chroma_colle
   print("Before inserting, the size of the collection: ", chroma_collection.count())
   #print(f"{metadatas}")
   chroma_collection.add(ids=ids, metadatas=metadatas, documents=text_chunksinTokens)
+  
   print("After inserting, the size of the collection: ", chroma_collection.count())
   return chroma_collection
 

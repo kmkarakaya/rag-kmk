@@ -6,22 +6,31 @@ from docx.opc.exceptions import PackageNotFoundError
 from rag_kmk import CONFIG
 from rag_kmk.knowledge_base.text_splitter import convert_Pages_ChunkinChar, convert_Chunk_Token, add_meta_data, add_document_to_collection
 from rag_kmk.vector_db import create_chroma_client
+from rag_kmk.vector_db.database import ChromaDBStatus  # Add this import
 
 
 
-def build_knowledge_base(document_directory_path):
-    """
-    Loads document from a specified directory. Supported file types are defined in CONFIG['supported_file_types'].
-    Currently supports .txt, .pdf, and .docx files.
 
-    Parameters:
-    - directory_path (str): The path to the directory containing the document to be loaded.
-
-    Returns:
-    - chroma_collection: The chroma collection object, or None if no documents were processed successfully.
-    """
-
-    chroma_client, chroma_collection = create_chroma_client()
+def build_knowledge_base(document_directory_path=None, chromaDB_path=None):
+    # if the user ONLY wants to load a permenant chromaDB collection, then the document_directory_path should be None
+    # and the chromaDB_path should be provided. In this case, we will not load any documents from the directory. 
+    if chromaDB_path is not None and document_directory_path is None:
+        chroma_client, chroma_collection, chromaDB_status=create_chroma_client(chromaDB_path=chromaDB_path)
+        print(f"***** 👍 Only a permanent ChromaDB loaded: {chromaDB_status.value} *****")
+        return chroma_collection, chromaDB_status
+    
+    # if the user wants to load a permenant chromaDB collection and also add new documents from the directory, 
+    # then both the paths should be provided.
+    if chromaDB_path is not None and document_directory_path is not None:
+        chroma_client, chroma_collection, chromaDB_status=create_chroma_client(chromaDB_path=chromaDB_path)
+        print(f"***** 👍 Permanent ChromaDB loaded and new documents added: {chromaDB_status.value} *****")
+    
+    # if the user wants to create a new in-memory chromaDB collection and also add new documents from the directory,
+    if chromaDB_path is None and document_directory_path is not None:
+        chroma_client, chroma_collection, chromaDB_status = create_chroma_client(chromaDB_path=None)
+        print(f"***** 👍 New in-memory ChromaDB created and documents will be added from: {document_directory_path} *****")
+    
+    
     current_id = chroma_collection.count()
     print(f"Current Number of Document Chunks in Vector DB : {current_id}")
 
@@ -108,10 +117,12 @@ def build_knowledge_base(document_directory_path):
 
     print(f'\nKnowledge Based populated by a total number of {chroma_collection.count()} document chunks from {document_directory_path}.')
     if not files_processed:
+        print(f"\nNo files were processed successfully from the directory: {document_directory_path}.")
+        print("Please check the directory path and the file types.")
         return None
     if error_messages:
         print("\nErrors encountered during processing:")
         for msg in error_messages:
             print(msg)
-    return chroma_collection
+    return chroma_collection, chromaDB_status
 

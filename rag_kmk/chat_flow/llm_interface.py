@@ -1,38 +1,43 @@
-import google.generativeai as genai
+from google import genai as genai
+from google.api_core import exceptions
+from google.genai import types
 from rag_kmk.vector_db import retrieve_chunks
 import os
 import requests
 from rag_kmk import CONFIG   
 
 
-def verify_api_key(api_key):
-    url = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent"
-    headers = {
-        "Content-Type": "application/json",
-        "x-goog-api-key": api_key
-    }
-    payload = {
-        "contents": [
-            {
-                "role": "user",
-                "parts": [
-                    {"text": "Give me five subcategories of jazz?"}
-                ]
-            }
-        ]
-    }
-
+def verify_api_key(api_key: str) -> bool:
+    """
+    Validates a Google Gemini API key using the official SDK.
+    Returns True if valid, False if invalid or error occurs.
+    """
     try:
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code == 200:
-            print("Valid Key")
-            return True
-        else:
-            print("Invalid Key")
-            return False
-    except requests.RequestException:
-        print("Error making the request.")
-        return False
+        # Initialize client (will fail immediately if key is malformed)
+        client = genai.Client(api_key=api_key)
+        
+        # Make a minimal test request (uses gemini-1.0-pro which is always available)
+        response = client.models.generate_content(
+            model="gemini-2.0-flash", 
+            contents="Give me a random number between 0-9:",)
+        
+        # If we get any response, the key is valid
+        print("👍 API key is valid.",response.text)
+        return bool(response.text)
+    
+    except exceptions.Unauthenticated as e:
+        print(f"❌ Invalid API key: {e}")
+    except exceptions.PermissionDenied as e:
+        print(f"❌ API disabled or project inactive: {e}")
+    except exceptions.InvalidArgument as e:
+        print(f"❌ Malformed request: {e}")
+    except exceptions.ResourceExhausted as e:
+        print(f"⚠️ Key valid but quota exceeded: {e}")
+        return True  # Key is technically valid
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+    
+    return False
 
 def check_environment_variables():
     GEMINI_API_KEY=None    
@@ -121,13 +126,24 @@ def get_API_key():
 def build_chatBot():
   # Retrieve GOOGLE_API_KEY from system environment variables
   gemini_api_key = get_API_key()
-  genai.configure(api_key=gemini_api_key)  
+  client = genai.Client(api_key=gemini_api_key)
   # Access the system_prompt value
   system_prompt = CONFIG['llm']['settings']['system_prompt']
   model=CONFIG['llm']['model']
   print("Building the chatbot with the model: ", model)
-  model = genai.GenerativeModel(model, system_instruction=system_prompt)
-  chat = model.start_chat(history=[])
+  generate_content_config = types.GenerateContentConfig(
+        temperature=0.5,
+        response_mime_type="text/plain",
+        system_instruction=[
+            types.Part.from_text(text=system_prompt),
+        ],
+    )
+  
+  
+  
+  chat = client.chats.create(model=model,
+                             config=generate_content_config,)
+ 
   return chat
 
 def generate_LLM_answer(prompt, context, chat):
@@ -151,7 +167,7 @@ def generateAnswer(RAG_LLM, chroma_collection,query,n_results=10, only_response=
     return output
 
 def run_rag_pipeline(RAG_LLM,chroma_collection):
-    RAG_LLM.history.clear()
+    
     print("-------"*10, "\n")
     print("Welcome to the RAG pipeline. Please enter your question or type 'bye' to exit.")
     while True:

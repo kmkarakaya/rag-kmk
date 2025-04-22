@@ -7,14 +7,23 @@ from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_
 
 
 def main():
-    print(CONFIG['llm'])
-    CONFIG['llm'].update({'model': 'gemini-1.5-flash-latest'})
-    print(CONFIG['llm'])
+    print("--------------------- ORIGINAL CONFIG ---------------------\n", CONFIG['llm'])
+    CONFIG['llm'].update({'model': 'gemini-2.0-flash'})
+    print("--------------------- AFTER CONFIG UPDATE ---------------------\n", CONFIG['llm'])
+    
     global RAG_LLM
     RAG_LLM = build_chatBot()
     
-    # Load the documents
-    knowledge_base= build_knowledge_base(r'.\tests\sample_documents') 
+    # Load the existing chromadb collection and add new documents to it
+    #knowledge_base, chromaDB_status = build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB')
+
+    # Load the existing chromadb collection without adding new documents
+    #knowledge_base, chromaDB_status = build_knowledge_base( chromaDB_path=r'.\chromaDB')
+
+    # Create a new in-memory chromadb collection and add new documents to it
+    knowledge_base, chromaDB_status = build_knowledge_base( document_directory_path=r'.\tests\sample_documents')
+
+    print("--------------------- CHROMADB STATUS ---------------------\n", chromaDB_status.value)
     print("-----------------"*4)
     print(CONFIG)    
 

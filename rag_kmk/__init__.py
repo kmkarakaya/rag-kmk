@@ -16,15 +16,16 @@ def initialize_rag(custom_config_path=None):
         Initialize the RAG system with either the default or a custom config.
     """
     CONFIG = load_config() # Load default config first
+    print(f"********* 🔔 Loading default config *********")
 
     if custom_config_path and os.path.exists(custom_config_path):
         try:
             with open(custom_config_path, 'r') as f:
                 yaml.safe_load(f)  # Validate YAML
-            print(f"Loading custom config from: {custom_config_path}")
+            print(f"********* 🔔 Loading custom config from: {custom_config_path} *********")
             CONFIG = load_config(custom_config_path)
         except (yaml.YAMLError, FileNotFoundError, Exception) as e:
-            print(f"Error loading config from {custom_config_path}: {e}. Using default config.")
+            print(f"*********🚩 Error loading config from {custom_config_path}: {e}. Using default config.")
 
     return CONFIG
 

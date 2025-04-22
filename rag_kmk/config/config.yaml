@@ -2,7 +2,7 @@
 # Vector Database Configuration
 vector_db:
   type: "chromadb"
-  chromaDB_path: "./chroma_db"
+  chromaDB_path: None #"./chroma_db"
   collection_name: "rag_collection"
   embedding_model: "distiluse-base-multilingual-cased-v2"
   tokens_per_chunk: 128
@@ -11,7 +11,7 @@ vector_db:
 # LLM Configuration
 llm:
   type: "gemini"
-  model: "gemini-1.5-flash-latest"  # or whichever Gemini model you're using
+  model: "gemini-1.5-flash"  # or whichever Gemini model you're using
   settings:
     temperature: 0.7
     max_output_tokens: 1024
