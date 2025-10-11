@@ -15,10 +15,10 @@ def main():
     RAG_LLM = build_chatBot()
     
     # Load the existing chromadb collection and add new documents to it
-    #knowledge_base, chromaDB_status = build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB')
+    #knowledge_base, chromaDB_status = build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chroma_db')
 
     # Load the existing chromadb collection without adding new documents
-    #knowledge_base, chromaDB_status = build_knowledge_base( chromaDB_path=r'.\chromaDB')
+    #knowledge_base, chromaDB_status = build_knowledge_base( chromaDB_path=r'.\chroma_db')
 
     # Create a new in-memory chromadb collection and add new documents to it
     knowledge_base, chromaDB_status = build_knowledge_base( document_directory_path=r'.\tests\sample_documents')

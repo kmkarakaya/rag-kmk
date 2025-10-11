@@ -10,6 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 # You can optionally import commonly used testing utilities
 import unittest
 from unittest.mock import Mock, patch
+import yaml
 
 # You might want to set up a test configuration
 from rag_kmk import initialize_rag
