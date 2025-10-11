@@ -4,9 +4,13 @@ from  rag_kmk import CONFIG
 from rag_kmk.knowledge_base import build_knowledge_base   
 from rag_kmk.vector_db import summarize_collection, retrieve_chunks, show_results
 from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_rag_pipeline, build_chatBot
+import argparse
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--smoke', action='store_true', help='Run non-interactive smoke pipeline and exit')
+    args = parser.parse_args()
     print("--------------------- ORIGINAL CONFIG ---------------------\n", CONFIG['llm'])
     CONFIG['llm'].update({'model': 'gemini-2.5-flash'})
     print("--------------------- AFTER CONFIG UPDATE ---------------------\n", CONFIG['llm'])
@@ -31,6 +35,9 @@ def main():
     # Summarize the collection
     if knowledge_base:
         summarize_collection(knowledge_base)
+        if args.smoke:
+            print('Smoke mode: exiting after summary')
+            return
         run_rag_pipeline(RAG_LLM,knowledge_base)
     else:
         print("No documents loaded.")

@@ -1,6 +1,5 @@
 import os
 import fitz  # PyMuPDF
-import docx2txt
 from docx.opc.exceptions import PackageNotFoundError
 from rag_kmk import CONFIG
 from rag_kmk.knowledge_base.text_splitter import (
@@ -93,14 +92,17 @@ def build_knowledge_base(document_directory_path=None, chromaDB_path=None):
 
 				elif file_extension == '.docx':
 					try:
+						# Import docx2txt lazily so tests and other imports don't require it at module-import time
+						try:
+							import docx2txt
+						except ImportError:
+							print(f"Error: docx2txt library not found. Please install it using 'pip install docx2txt'. Skipping '{filename}'.")
+							continue
 						text = docx2txt.process(file_path)
 						document.append(text)
 						if not text:
 							raise ValueError(f"No text extracted from {filename}")
 						print(f"\nDOCX document '{filename}' loaded successfully from '{file_path}'. Text length: {len(text)} characters.")
-					except ImportError:
-						print(f"Error: docx2txt library not found. Please install it using 'pip install docx2txt'. Skipping '{filename}'.")
-						continue
 					except Exception as e:
 						error_messages.append(f"Failed to load document '{filename}': {e}")
 						print(f"\nFailed to load document from '{file_path}': {e}")
