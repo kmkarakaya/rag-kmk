@@ -30,7 +30,7 @@ def convert_Chunk_Token(text_chunksinChar,
 
 def add_document_to_collection(ids, metadatas, text_chunksinTokens, chroma_collection):
   print("Before inserting, the size of the collection: ", chroma_collection.count())
-  #print(f"{metadatas}")
+  print(f"***** metadatas: *****\n {metadatas}")
   chroma_collection.add(ids=ids, metadatas=metadatas, documents=text_chunksinTokens)
   
   print("After inserting, the size of the collection: ", chroma_collection.count())

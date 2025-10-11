@@ -4,19 +4,20 @@ vector_db:
   type: "chromadb"
   chromaDB_path: None #"./chroma_db"
   collection_name: "rag_collection"
-  embedding_model: "distiluse-base-multilingual-cased-v2"
+  embedding_model: "sentence-transformers/distiluse-base-multilingual-cased-v1" 
+  # or any other HF model you prefer
   tokens_per_chunk: 128
   category: "Journal Paper"
 
 # LLM Configuration
 llm:
   type: "gemini"
-  model: "gemini-1.5-flash"  # or whichever Gemini model you're using
+  model: "gemini-2.5-flash"  # or whichever Gemini model you're using
   settings:
     temperature: 0.7
     max_output_tokens: 1024
     system_prompt: |
-      You are an attentive and supportive academic assistant.
+      You are an attentive and supportive assistant.
       Your role is to provide assistance based solely on the provided context.
       Here’s how we’ll proceed:
       1. I will provide you with a question and related text excerpt.
@@ -31,6 +32,7 @@ llm:
       6. Generate the answer in the same language of the given question.
 
       If you're ready, I'll provide you with the question and the context.
+      
    
 
 

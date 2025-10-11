@@ -15,10 +15,11 @@ def create_chroma_client(chromaDB_path=CONFIG["vector_db"]["chromaDB_path"],
                          collection_name=CONFIG["vector_db"]["collection_name"], 
                          sentence_transformer_model=CONFIG["vector_db"]["embedding_model"]
                          ):
-
-    
     status = None
-    embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(model_name=sentence_transformer_model)
+    embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
+        model_name=sentence_transformer_model,
+        device="cpu"  # Force CPU usage
+    )
     
     if chromaDB_path is not None:
         print("Trying to access collection at ", chromaDB_path, " using Persistent Client")

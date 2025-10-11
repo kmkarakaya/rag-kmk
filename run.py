@@ -8,7 +8,7 @@ from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_
 
 def main():
     print("--------------------- ORIGINAL CONFIG ---------------------\n", CONFIG['llm'])
-    CONFIG['llm'].update({'model': 'gemini-2.0-flash'})
+    CONFIG['llm'].update({'model': 'gemini-2.5-flash'})
     print("--------------------- AFTER CONFIG UPDATE ---------------------\n", CONFIG['llm'])
     
     global RAG_LLM

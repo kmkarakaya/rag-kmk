@@ -1,17 +1,45 @@
 import os
-import fitz  # PyMuPDF
-#from docx import Document
-import docx2txt
-from docx.opc.exceptions import PackageNotFoundError
 from rag_kmk import CONFIG
 from rag_kmk.knowledge_base.text_splitter import convert_Pages_ChunkinChar, convert_Chunk_Token, add_meta_data, add_document_to_collection
 from rag_kmk.vector_db import create_chroma_client
 from rag_kmk.vector_db.database import ChromaDBStatus  # Add this import
+from docling.document_converter import DocumentConverter
+from docling.chunking import HybridChunker
+from docling.document_converter import DocumentConverter
+from docling.datamodel.pipeline_options import PdfPipelineOptions
+from docling.document_converter import DocumentConverter, PdfFormatOption, InputFormat
+from docling.backend.docling_parse_v2_backend import DoclingParseV2DocumentBackend
 
+from transformers import AutoTokenizer
+import time
 
 
 
 def build_knowledge_base(document_directory_path=None, chromaDB_path=None):
+
+
+    EMBED_MODEL_ID = CONFIG['vector_db']['embedding_model']  
+    MAX_TOKENS = CONFIG['vector_db']['tokens_per_chunk']  
+
+    tokenizer = AutoTokenizer.from_pretrained(EMBED_MODEL_ID)
+
+    chunker = HybridChunker(
+        tokenizer=tokenizer,  # instance or model name, defaults to "sentence-transformers/all-MiniLM-L6-v2"
+        max_tokens=MAX_TOKENS,  # optional, by default derived from `tokenizer`
+        merge_peers=True,  # optional, defaults to True
+    )
+
+    pipeline_options = PdfPipelineOptions()
+    pipeline_options.do_ocr = False # pick what you need
+    pipeline_options.do_table_structure = False # pick what you need
+
+    doc_converter = DocumentConverter(
+        format_options={
+            InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options, backend=DoclingParseV2DocumentBackend)  # switch to beta PDF backend
+            }
+    )
+
+
     # if the user ONLY wants to load a permenant chromaDB collection, then the document_directory_path should be None
     # and the chromaDB_path should be provided. In this case, we will not load any documents from the directory. 
     if chromaDB_path is not None and document_directory_path is None:
@@ -38,77 +66,69 @@ def build_knowledge_base(document_directory_path=None, chromaDB_path=None):
     if not os.path.isdir(document_directory_path):
         raise ValueError(f"Invalid directory path: '{document_directory_path}'. Please provide a valid directory.")
 
-    files_processed = False # Flag to track if any files were processed successfully
-    error_messages = [] # Collect error messages for all failed files
+
 
     for filename in os.listdir(document_directory_path):
         file_path = os.path.join(document_directory_path, filename)
         file_extension = os.path.splitext(filename)[1]
-        document = []
+        
+        print(f"\nProcessing file: {filename}")
+
 
         if file_extension in CONFIG['supported_file_types']:
             try:
-                if file_extension == '.txt':
-                    try:
-                        with open(file_path, 'r', encoding='utf-8', errors='replace') as file:
-                            text = ""
-                            chunk_size = 1024 * 1024  # 1MB chunks
-                            while True:
-                                chunk = file.read(chunk_size)
-                                if not chunk:
-                                    break
-                                text += chunk
-                            if text:
-                                document.append(text.strip())
-                                print(f'\nText document {filename} loaded successfully from {file_path}')
-                            else:
-                                print(f"\nWarning: Skipping empty or unreadable .txt file: {filename}")
-                    except FileNotFoundError:
-                        print(f"Error: File not found: {file_path}")
-                        error_messages.append(f"File not found: {file_path}")
-                    except UnicodeDecodeError:
-                        print(f"Error: Could not decode file {file_path} with UTF-8. Try specifying a different encoding.")
-                        error_messages.append(f"Could not decode file {file_path} with UTF-8.")
-                    except Exception as e:
-                        print(f"An unexpected error occurred while processing {file_path}: {e}")
-                        error_messages.append(f"An unexpected error occurred while processing {file_path}: {e}")
+                start_time = time.time()
+                print(f'\tLoading document from {file_path}...')
+                doc = doc_converter.convert(file_path).document
+                conversion_time = time.time() - start_time
+                print(f'\tDocument loaded successfully from {file_path} in {conversion_time:.2f} seconds')
+                
+                chunking_start = time.time()
+                chunk_iter = chunker.chunk(dl_doc=doc)
+                chunks = list(chunk_iter)
+                chunking_time = time.time() - chunking_start
+                print(f"\tDocument chunked into {len(chunks)} chunks in {chunking_time:.2f} seconds")
+                
+                ids=[]
+                metadatas=[]
+                text_chunksinTokens = []
+                
+                tokenization_start = time.time()
+                for i, chunk in enumerate(chunks):
+                    print(f"=== {i} ===")
+                    txt_tokens = len(tokenizer.tokenize(chunk.text))
+                    #print(f"\t\tchunk.text ({txt_tokens} tokens):\n{chunk.text!r}")
+                    ser_txt = chunker.contextualize(chunk=chunk)
+                    ser_tokens = len(tokenizer.tokenize(ser_txt))
+                    print(f"\t\tchunker.contextualize(chunk) ({ser_tokens} tokens):\n{ser_txt!r}")
+                    print()
+                    ids.append(str(i+current_id))
+                    text_chunksinTokens.append(chunker.contextualize(chunk=chunk))
+                    metadatas.append( {                        
+                        #"headings": chunk.meta.headings,
+                        "document": chunk.meta.origin.filename,
+                        #"file_uri": chunk.meta.origin.uri
+                    })
+                tokenization_time = time.time() - tokenization_start
+                print(f"\tTokenization and metadata preparation completed in {tokenization_time:.2f} seconds")
 
-                elif file_extension == '.pdf':
-                    with fitz.open(file_path) as doc:
-                        text = ''
-                        for page in doc:
-                            text += page.get_text()
-                        document.append(text)
-                    print(f'\nPDF document {filename} loaded successfully from {file_path}')
-                elif file_extension == '.docx':
-                    try:
-                        text = docx2txt.process(file_path)
-                        document.append(text)
-                        if not text:
-                            raise ValueError(f"No text extracted from {filename}")
-                        print(f"\nDOCX document '{filename}' loaded successfully from '{file_path}'. Text length: {len(text)} characters.")
-                    except ImportError:
-                        print(f"Error: docx2txt library not found. Please install it using 'pip install docx2txt'. Skipping '{filename}'.")
-                        continue
-                    except Exception as e:
-                        error_messages.append(f"Failed to load document '{filename}': {e}")
-                        print(f"\nFailed to load document from '{file_path}': {e}")
-                        continue
-
-                text_chunksinChar = convert_Pages_ChunkinChar(document)
-                text_chunksinTokens = convert_Chunk_Token(text_chunksinChar)
-                ids, metadatas = add_meta_data(text_chunksinTokens, filename, current_id)
+                storage_start = time.time()
                 current_id += len(text_chunksinTokens)
                 chroma_collection = add_document_to_collection(ids, metadatas, text_chunksinTokens, chroma_collection)
-                files_processed = True # Set flag if processing was successful
-                print(f"Document {filename} added to the collection")
-                print(f"Current number of document chunks in Vector DB: {chroma_collection.count()} ")
-            except (FileNotFoundError, fitz.EmptyFileError, PackageNotFoundError, UnicodeDecodeError) as e: #Catch UnicodeDecodeError
-                error_messages.append(f"Failed to load document '{filename}': {e}.  Try specifying encoding.")
-                print(f'\nFailed to load document from {file_path}: {e}')
-                continue
+                storage_time = time.time() - storage_start
+                
+                total_time = time.time() - start_time
+                print(f"\nDocument {filename} processing summary:")
+                print(f"- Document conversion: {conversion_time:.2f} seconds")
+                print(f"- Chunking: {chunking_time:.2f} seconds")
+                print(f"- Tokenization and metadata: {tokenization_time:.2f} seconds")
+                print(f"- ChromaDB storage: {storage_time:.2f} seconds")
+                print(f"- Total processing time: {total_time:.2f} seconds")
+                print(f"- Added {len(chunks)} chunks to collection")
+                print(f"- Current collection size: {chroma_collection.count()} chunks\n")
+
             except Exception as e:
-                error_messages.append(f"Failed to load document '{filename}': {e}")
+                
                 print(f'\nFailed to load document from {file_path}: {e}')
                 continue
 
@@ -116,13 +136,7 @@ def build_knowledge_base(document_directory_path=None, chromaDB_path=None):
             print(f'\nSkipping unsupported file type: {file_path}')
 
     print(f'\nKnowledge Based populated by a total number of {chroma_collection.count()} document chunks from {document_directory_path}.')
-    if not files_processed:
-        print(f"\nNo files were processed successfully from the directory: {document_directory_path}.")
-        print("Please check the directory path and the file types.")
-        return None
-    if error_messages:
-        print("\nErrors encountered during processing:")
-        for msg in error_messages:
-            print(msg)
+
+
     return chroma_collection, chromaDB_status
 

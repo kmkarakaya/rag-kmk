@@ -1,3 +1,4 @@
+# streamlit run .\run_interface2.py
 from rag_kmk.knowledge_base import build_knowledge_base
 from rag_kmk.vector_db import summarize_collection
 from rag_kmk.chat_flow import RAG_LLM, generateAnswer

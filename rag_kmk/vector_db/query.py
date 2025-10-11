@@ -22,7 +22,7 @@ def retrieve_chunks(chroma_collection, query, n_results=5,
             print("\tDocument Text: ")
             print(doc)
             print(f"\tDocument Source: {results['metadatas'][0][i]['document']}")
-            print(f"\tDocument Source Type: {results['metadatas'][0][i]['category']}")
+            #print(f"\tDocument Source Type: {results['metadatas'][0][i]['category']}")
             print(f"\tDocument Distance: {results['distances'][0][i]}")
         
         if len(results['documents'][0]) == 0:

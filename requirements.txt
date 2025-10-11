@@ -8,3 +8,4 @@ google-genai
 chromadb==0.5.3
 streamlit
 docx2txt
+docling
