@@ -6,6 +6,13 @@ import os
 import requests
 from rag_kmk import CONFIG   
 
+# Module-level singletons to hold the genai client and chat so the underlying
+# httpx client stays alive for the lifetime of the process. Creating many
+# short-lived genai.Client instances can lead to the "client has been closed"
+# RuntimeError coming from httpx when the SDK's internal client gets closed.
+_GLOBAL_GENAI_CLIENT = None
+_GLOBAL_CHAT = None
+
 
 def verify_api_key(api_key: str) -> bool:
     """
@@ -124,31 +131,54 @@ def get_API_key():
     
 
 def build_chatBot():
-  # Retrieve GOOGLE_API_KEY from system environment variables
-  gemini_api_key = get_API_key()
-  client = genai.Client(api_key=gemini_api_key)
-  # Access the system_prompt value
-  system_prompt = CONFIG['llm']['settings']['system_prompt']
-  model=CONFIG['llm']['model']
-  print("Building the chatbot with the model: ", model)
-  generate_content_config = types.GenerateContentConfig(
-        temperature=0.5,
-        response_mime_type="text/plain",
-        system_instruction=[
-            types.Part.from_text(text=system_prompt),
-        ],
-    )
-  
-  
-  
-  chat = client.chats.create(model=model,
-                             config=generate_content_config,)
- 
-  return chat
+    # Retrieve GOOGLE_API_KEY from system environment variables
+    global _GLOBAL_GENAI_CLIENT, _GLOBAL_CHAT
+    gemini_api_key = get_API_key()
+
+    # If we've already built a persistent client/chat, return it.
+    if _GLOBAL_CHAT is not None:
+            return _GLOBAL_CHAT
+
+    # Create a single genai.Client that will live for the process lifetime.
+    if _GLOBAL_GENAI_CLIENT is None:
+            _GLOBAL_GENAI_CLIENT = genai.Client(api_key=gemini_api_key)
+
+    # Access the system_prompt value
+    system_prompt = CONFIG['llm']['settings']['system_prompt']
+    model = CONFIG['llm']['model']
+    print("Building the chatbot with the model: ", model)
+    generate_content_config = types.GenerateContentConfig(
+                temperature=0.5,
+                response_mime_type="text/plain",
+                system_instruction=[
+                        types.Part.from_text(text=system_prompt),
+                ],
+        )
+
+    _GLOBAL_CHAT = _GLOBAL_GENAI_CLIENT.chats.create(model=model,
+                                                         config=generate_content_config,)
+
+    return _GLOBAL_CHAT
 
 def generate_LLM_answer(prompt, context, chat):
-  response = chat.send_message( prompt + context)
-  return response.text
+    try:
+        response = chat.send_message( prompt + context)
+        return response.text
+    except RuntimeError as e:
+        # Workaround for httpx "client has been closed" errors coming from
+        # google.genai internals: try to recreate the chat client once and retry.
+        msg = str(e)
+        if 'client has been closed' in msg:
+            print("Warning: HTTP client was closed. Recreating chat client and retrying once...")
+            try:
+                new_chat = build_chatBot()
+                response = new_chat.send_message( prompt + context)
+                return response.text
+            except Exception as e2:
+                print("Retry after recreating client failed:", e2)
+                raise
+        # If it's a different runtime error, re-raise
+        raise
 
 def generateAnswer(RAG_LLM, chroma_collection,query,n_results=10, only_response=True):
     retrieved_documents= retrieve_chunks(chroma_collection, query, n_results, return_only_docs=True)
