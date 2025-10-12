@@ -1,22 +1,24 @@
 black
 black[jupyter]
-build
-bump-my-version
-cookiecutter
+build==1.2.1
+bump-my-version==0.24.3
+cookiecutter==2.6.0
 codespell
 wheel
 flake8
 twine
-click
-pytest
+click==8.1.7
+pytest==8.4.2
 pytest-runner
+pytest-cov==7.0.0
+coverage==7.10.7
 
 ipykernel
 livereload
 nbconvert
 nbformat
 sphinx
-watchdog
+watchdog==6.0.0
 mkdocs
 mkdocs-git-revision-date-plugin 
 mkdocs-git-revision-date-localized-plugin
@@ -26,5 +28,5 @@ mkdocs-pdf-export-plugin
 mkdocstrings 
 mkdocstrings-crystal
 mkdocstrings-python-legacy
-pygments
+pygments==2.18.0
 pymdown-extensions

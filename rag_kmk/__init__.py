@@ -29,12 +29,14 @@ def initialize_rag(custom_config_path=None):
 
     return CONFIG
 
-# Load the configuration when the module is imported
+# Load a safe default configuration quietly so modules that reference CONFIG at import
+# time do not fail. This avoids network or interactive side-effects while keeping
+# import-time configuration available. Call `initialize_rag()` explicitly to
+# override or re-load configuration at runtime if needed.
 try:
-    CONFIG = initialize_rag("./config.yaml")
-    print(f"RAG-KMK initialized with config: {CONFIG}") #Added CONFIG to output
-except Exception as e:
-    print(f"Error initializing rag-kmk module: {e}")
+    CONFIG = load_config() or {}
+except Exception:
+    CONFIG = {}
 
 
 __all__ = ['build_knowledge_base', 'build_vector_db', 'build_rag_llm', 'initialize_rag', 'CONFIG']
