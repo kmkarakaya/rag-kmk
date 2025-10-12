@@ -1,69 +1,101 @@
-
-
 def retrieve_chunks(chroma_collection, query, n_results=5,
-                 return_only_docs=False, filterType=None, filterValue=None):
-    
+                    return_only_docs=False, filterType=None, filterValue=None):
+    """
+    Run a similarity query against a Chroma collection and return raw results.
+
+    Assumes the chroma_collection exposes a `query` method that accepts:
+      - query_texts: list[str]
+      - include: list[str]
+      - where: dict (optional)
+      - n_results: int
+
+    The returned structure is expected to contain keys:
+      - 'documents': [[...]]
+      - 'metadatas': [[...]]
+      - 'distances': [[...]]
+    """
     if filterType is not None and filterValue is not None:
         results = chroma_collection.query(
             query_texts=[query],
             include=["documents", "metadatas", "distances"],
             where={filterType: filterValue},
-            n_results=n_results)
-
+            n_results=n_results,
+        )
     else:
         results = chroma_collection.query(
             query_texts=[query],
-            include= [ "documents","metadatas",'distances' ],
-            n_results=n_results)
+            include=["documents", "metadatas", "distances"],
+            n_results=n_results,
+        )
 
     if return_only_docs:
-        for i, doc in enumerate(results['documents'][0]):
+        docs = results.get("documents", [[]])[0]
+        if len(docs) == 0:
+            print("No results found.")
+            return []
+
+        for i, doc in enumerate(docs):
             print(f"Document {i+1}:")
             print("\tDocument Text: ")
             print(doc)
-            print(f"\tDocument Source: {results['metadatas'][0][i]['document']}")
-            #print(f"\tDocument Source Type: {results['metadatas'][0][i]['category']}")
-            print(f"\tDocument Distance: {results['distances'][0][i]}")
-        
-        if len(results['documents'][0]) == 0:
-            print("No results found.")
-            
-        return results['documents'][0]
-    else:
-        return results
+            try:
+                src = results["metadatas"][0][i].get("document")
+            except Exception:
+                src = None
+            print(f"\tDocument Source: {src}")
+            try:
+                dist = results["distances"][0][i]
+            except Exception:
+                dist = None
+            print(f"\tDocument Distance: {dist}")
 
+        return docs
 
-
-
+    return results
 
 
 def show_results(results, return_only_docs=False):
-  
-  
+    """
+    Pretty-print results returned by `retrieve_chunks` or similar.
+    - If return_only_docs is True, `results` is a list of document strings.
+    - Otherwise `results` is a dict with keys 'documents', 'metadatas', 'distances'.
+    """
+    if return_only_docs:
+        retrieved_documents = results
+        if not retrieved_documents:
+            print("No results found.")
+            return
+        for i, doc in enumerate(retrieved_documents):
+            print(f"Document {i+1}:")
+            print("\tDocument Text: ")
+            print(doc)
+        return
 
-  if return_only_docs:
-    retrieved_documents = results
+    retrieved_documents = results.get("documents", [[]])[0]
     if len(retrieved_documents) == 0:
-      print("No results found.")
-      return
+        print("No results found.")
+        return
+
+    retrieved_documents_metadata = results.get("metadatas", [[]])[0]
+    retrieved_documents_distances = results.get("distances", [[]])[0]
+    print("------- retrieved documents -------\n")
+
     for i, doc in enumerate(retrieved_documents):
-      print(f"Document {i+1}:")
-      print("\tDocument Text: ")
-      print(doc)
-  else:
-
-      retrieved_documents = results['documents'][0]
-      if len(retrieved_documents) == 0:
-          print("No results found.")
-          return
-      retrieved_documents_metadata = results['metadatas'][0]
-      retrieved_documents_distances = results['distances'][0]
-      print("------- retrieved documents -------\n")
-
-      for i, doc in enumerate(retrieved_documents):
-          print(f"Document {i+1}:")
-          print("\tDocument Text: ")
-          print(doc)
-          print(f"\tDocument Source: {retrieved_documents_metadata[i]['document']}")
-          print(f"\tDocument Source Type: {retrieved_documents_metadata[i]['category']}")
-          print(f"\tDocument Distance: {retrieved_documents_distances[i]}")
+        print(f"Document {i+1}:")
+        print("\tDocument Text: ")
+        print(doc)
+        try:
+            src = retrieved_documents_metadata[i].get("document")
+        except Exception:
+            src = None
+        try:
+            cat = retrieved_documents_metadata[i].get("category")
+        except Exception:
+            cat = None
+        try:
+            dist = retrieved_documents_distances[i]
+        except Exception:
+            dist = None
+        print(f"\tDocument Source: {src}")
+        print(f"\tDocument Source Type: {cat}")
+        print(f"\tDocument Distance: {dist}")

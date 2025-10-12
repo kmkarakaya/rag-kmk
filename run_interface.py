@@ -5,7 +5,7 @@
 
 from rag_kmk.knowledge_base import build_knowledge_base  
 from rag_kmk.vector_db import summarize_collection 
-from rag_kmk.chat_flow import RAG_LLM, generateAnswer
+from rag_kmk.chat_flow import build_chatBot, generateAnswer
 import streamlit as st
 import os
 import json
@@ -83,7 +83,13 @@ def main_interface():
             # Add user message to chat history
             st.session_state.messages.append({"role": "user", "content": prompt})
 
-            response = generateAnswer(RAG_LLM, knowledge_base, prompt)
+            # Lazily create a chat client in session state to avoid import-time side-effects
+            if 'chat_client' not in st.session_state:
+                try:
+                    st.session_state.chat_client = build_chatBot({})
+                except Exception:
+                    st.session_state.chat_client = None
+            response = generateAnswer(st.session_state.get('chat_client'), knowledge_base, prompt)
 
             # Display assistant response in chat message container
             with st.chat_message("assistant"):

@@ -1,18 +1,18 @@
 import os
 import fitz  # PyMuPDF
 from docx.opc.exceptions import PackageNotFoundError
-from rag_kmk import CONFIG
+import rag_kmk
 from rag_kmk.knowledge_base.text_splitter import (
 	convert_Pages_ChunkinChar,
 	convert_Chunk_Token,
 	add_meta_data,
 	add_document_to_collection,
 )
-from rag_kmk.vector_db import create_chroma_client
+import rag_kmk.vector_db.database as vdb_database
 from rag_kmk.vector_db.database import ChromaDBStatus
 
 
-def build_knowledge_base(document_directory_path=None, chromaDB_path=None):
+def build_knowledge_base(document_directory_path=None, chromaDB_path=None, config=None):
 	"""Build or load the knowledge base into Chroma.
 
 	This is the project's single document loader. It supports .txt, .pdf,
@@ -24,21 +24,61 @@ def build_knowledge_base(document_directory_path=None, chromaDB_path=None):
 	Returns:
 		(chroma_collection, chromaDB_status)
 	"""
-	# Handle persistent-only case
-	if chromaDB_path is not None and document_directory_path is None:
-		chroma_client, chroma_collection, chromaDB_status = create_chroma_client(chromaDB_path=chromaDB_path)
-		print(f"***** 👍 Only a permanent ChromaDB loaded: {chromaDB_status.value} *****")
-		return chroma_collection, chromaDB_status
+	# Resolve config (prefer explicit param, fallback to module-level CONFIG)
+	cfg = config if config is not None else getattr(rag_kmk, 'CONFIG', {}) or {}
 
-	# Persistent + directory
-	if chromaDB_path is not None and document_directory_path is not None:
-		chroma_client, chroma_collection, chromaDB_status = create_chroma_client(chromaDB_path=chromaDB_path)
-		print(f"***** 👍 Permanent ChromaDB loaded and new documents added: {chromaDB_status.value} *****")
+	# Helper to extract vector DB defaults
+	db_cfg = cfg.get('vector_db', {}) if isinstance(cfg, dict) else {}
+	collection_name = db_cfg.get('collection_name')
+	sentence_transformer_model = db_cfg.get('embedding_model')
 
-	# In-memory + directory
-	if chromaDB_path is None and document_directory_path is not None:
-		chroma_client, chroma_collection, chromaDB_status = create_chroma_client(chromaDB_path=None)
+	# Three explicit behaviors depending on parameters (or config fallback):
+	# 1) chromaDB_path provided and document_directory_path provided =>
+	#    load persistent collection and add new documents
+	# 2) chromaDB_path provided and document_directory_path is None =>
+	#    load persistent collection only (do not add documents)
+	# 3) chromaDB_path is None and document_directory_path provided =>
+	#    create an in-memory collection and add documents
+
+	chroma_client = chroma_collection = chromaDB_status = None
+
+	if chromaDB_path is not None:
+		# Persistent mode (either with or without adding documents)
+		chroma_client, chroma_collection, chromaDB_status = vdb_database.create_chroma_client(
+			chromaDB_path=chromaDB_path,
+			collection_name=collection_name,
+			sentence_transformer_model=sentence_transformer_model,
+		)
+		if document_directory_path is None:
+			# Mode 2: persistent-only
+			print(f"***** 👍 Only a permanent ChromaDB loaded: {getattr(chromaDB_status, 'value', chromaDB_status)} *****")
+			if chroma_collection is None:
+				print("Error: chroma collection not available; aborting knowledge base build")
+				return None, chromaDB_status
+			return chroma_collection, chromaDB_status
+		else:
+			# Mode 1: persistent + add documents
+			print(f"***** 👍 Permanent ChromaDB loaded and new documents will be added: {getattr(chromaDB_status, 'value', chromaDB_status)} *****")
+			if chroma_collection is None:
+				print("Error: chroma collection not available; aborting knowledge base build")
+				return None, chromaDB_status
+
+	elif document_directory_path is not None:
+		# Mode 3: in-memory + add documents
+		chroma_client, chroma_collection, chromaDB_status = vdb_database.create_chroma_client(
+			chromaDB_path=None,
+			collection_name=collection_name,
+			sentence_transformer_model=sentence_transformer_model,
+		)
 		print(f"***** 👍 New in-memory ChromaDB created and documents will be added from: {document_directory_path} *****")
+		if chroma_collection is None:
+			print("Error: chroma collection not available; aborting knowledge base build")
+			return None, chromaDB_status
+
+	else:
+		# Neither persistent nor document directory provided: nothing to do.
+		print("No chroma collection available; nothing to do.")
+		return None, None
 
 	current_id = chroma_collection.count()
 	print(f"Current Number of Document Chunks in Vector DB : {current_id}")
@@ -55,7 +95,8 @@ def build_knowledge_base(document_directory_path=None, chromaDB_path=None):
 		file_extension = os.path.splitext(filename)[1]
 		document = []
 
-		if file_extension in CONFIG['supported_file_types']:
+		supported_types = cfg.get('supported_file_types', ['.txt', '.pdf', '.docx'])
+		if file_extension in supported_types:
 			try:
 				if file_extension == '.txt':
 					try:

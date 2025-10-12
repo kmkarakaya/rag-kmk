@@ -1,42 +1,32 @@
-"""Top-level package for rag-kmk."""
+"""Top-level package for rag-kmk.
 
-__author__ = """Murat Karakaya"""
+This module intentionally avoids performing any network calls or reading
+environment files at import time. Call `initialize_rag()` to load configuration
+explicitly at runtime.
+"""
+
+__author__ = "Murat Karakaya"
 __email__ = "kmkarakaya@gmail.com"
 __version__ = "0.0.49"
 
+from .config.config import load_config, mask_config
 
-from .config.config import load_config
-import os
-import yaml
-
-# Define the initialize_rag function
+# Do NOT load configuration or build network clients at import time. Provide an
+# explicit initializer that callers can use to load or override configuration.
 def initialize_rag(custom_config_path=None):
+    """Load and return configuration from the repository or a custom path.
+
+    This function is intentionally side-effect free (it returns the config
+    dict). Callers who need a module-level `CONFIG` may assign the returned
+    value to `rag_kmk.CONFIG` explicitly.
     """
-        This module initialization ensures that rag-kmk is properly set up upon import.
-        Initialize the RAG system with either the default or a custom config.
-    """
-    CONFIG = load_config() # Load default config first
-    print(f"********* 🔔 Loading default config *********")
+    return load_config(custom_config_path)
 
-    if custom_config_path and os.path.exists(custom_config_path):
-        try:
-            with open(custom_config_path, 'r') as f:
-                yaml.safe_load(f)  # Validate YAML
-            print(f"********* 🔔 Loading custom config from: {custom_config_path} *********")
-            CONFIG = load_config(custom_config_path)
-        except (yaml.YAMLError, FileNotFoundError, Exception) as e:
-            print(f"*********🚩 Error loading config from {custom_config_path}: {e}. Using default config.")
-
-    return CONFIG
-
-# Load a safe default configuration quietly so modules that reference CONFIG at import
-# time do not fail. This avoids network or interactive side-effects while keeping
-# import-time configuration available. Call `initialize_rag()` explicitly to
-# override or re-load configuration at runtime if needed.
+# Backwards-compatible behavior: try to populate CONFIG at import time from the
+# repository config file. Wrap in try/except to avoid hard failures on import.
 try:
-    CONFIG = load_config() or {}
+    CONFIG = load_config()
 except Exception:
     CONFIG = {}
 
-
-__all__ = ['build_knowledge_base', 'build_vector_db', 'build_rag_llm', 'initialize_rag', 'CONFIG']
+__all__ = ["initialize_rag", "CONFIG", "load_config", "mask_config"]

@@ -1,50 +1,53 @@
-#pip install rag-kmk
-# ensure that you have a directory ./files with some documents in it.
-from  rag_kmk import CONFIG
-from rag_kmk.knowledge_base import build_knowledge_base   
-from rag_kmk.vector_db import summarize_collection, retrieve_chunks, show_results
-from rag_kmk.chat_flow import generateAnswer, generate_LLM_answer, RAG_LLM, run_rag_pipeline, build_chatBot
-import argparse
+"""Minimal run.py sample for the rag-kmk package.
+This file intentionally contains a very small, non-argument workflow
+that demonstrates three simple library calls. It is meant to be
+used as an example and a distribution entry point only.
+
+NEVER CHANGE the code in this file to add features or fix bugs.
+All such changes must be made in the library code itself.
+"""
+
+from rag_kmk import CONFIG
+from rag_kmk.knowledge_base import build_knowledge_base
+import rag_kmk.chat_flow as chat_flow
+from rag_kmk.vector_db import summarize_collection
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--smoke', action='store_true', help='Run non-interactive smoke pipeline and exit')
-    args = parser.parse_args()
-    print("--------------------- ORIGINAL CONFIG ---------------------\n", CONFIG['llm'])
-    CONFIG['llm'].update({'model': 'gemini-2.5-flash'})
-    print("--------------------- AFTER CONFIG UPDATE ---------------------\n", CONFIG['llm'])
+print("--------------------- ORIGINAL CONFIG ---------------------\n", CONFIG['llm'])
+CONFIG['llm'].update({'model': 'gemini-2.5-flash'})
+print("--------------------- AFTER CONFIG UPDATE ---------------------\n", CONFIG['llm'])
     
-    global RAG_LLM
-    RAG_LLM = build_chatBot()
-    
-    # Load the existing chromadb collection and add new documents to it
-    #knowledge_base, chromaDB_status = build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chroma_db')
+# 1) Configure (example)  2) build an in-memory knowledge base  3) run a single pipeline call
 
-    # Load the existing chromadb collection without adding new documents
-    #knowledge_base, chromaDB_status = build_knowledge_base( chromaDB_path=r'.\chroma_db')
+# Load the existing chromadb collection and add new documents to it
+#kb, chromaDB_status = build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB')
 
-    # Create a new in-memory chromadb collection and add new documents to it
-    knowledge_base, chromaDB_status = build_knowledge_base( document_directory_path=r'.\tests\sample_documents')
+# Load the existing chromadb collection without adding new documents
+#kb, chromaDB_status = build_knowledge_base( chromaDB_path=r'.\chromaDB')
 
-    print("--------------------- CHROMADB STATUS ---------------------\n", chromaDB_status.value)
-    print("-----------------"*4)
-    print(CONFIG)    
+# Create a new in-memory chromadb collection and add new documents to it
+kb, chromaDB_status = build_knowledge_base(document_directory_path=r'.\\tests\\sample_documents')
 
-    print("-----------------"*4)  
-    # Summarize the collection
-    if knowledge_base:
-        summarize_collection(knowledge_base)
-        if args.smoke:
-            print('Smoke mode: exiting after summary')
-            return
-        run_rag_pipeline(RAG_LLM,knowledge_base)
-    else:
+print("--------------------- CHROMADB STATUS ---------------------\n", chromaDB_status.value)
+
+# Summarize the collection
+if kb is not None:
+        print("--------------------- CHROMADB SUMMARY ---------------------\n")
+        summarize_collection(kb)
+        print("--------------------- RUN RAG PIPELINE ---------------------\n")
+        # Build a real ChatClient from the configured LLM settings and run the pipeline
+        client = chat_flow.build_chatBot(CONFIG.get('llm', {}))
+        try:
+            chat_flow.run_rag_pipeline(client, kb)
+        finally:
+            try:
+                client.close()
+            except Exception:
+                pass
+else:
         print("No documents loaded.")
-    print("-----------------"*4)
+print("-----------------"*4)
     
+# end of minimal run.py
 
 
-
-if __name__ == "__main__":
-    main()

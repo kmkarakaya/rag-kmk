@@ -27,21 +27,50 @@ def tmp_chroma_dir(tmp_path, monkeypatch):
 
 @pytest.fixture
 def mock_chroma_client(monkeypatch):
-    # Provide a minimal fake collection object
+    # Provide a minimal fake collection object and inject a fake `chromadb`
+    # module into sys.modules. This mocks the third-party dependency rather
+    # than the internal rag_kmk API.
+    import types as _types
+
     fake_collection = SimpleNamespace()
     fake_collection._items = []
-    fake_collection.count = lambda : len(fake_collection._items)
+    fake_collection.count = lambda: len(fake_collection._items)
 
-    def add(ids, metadatas, documents, collection):
+    def add(ids, metadatas, documents, collection=None):
         fake_collection._items.extend(documents)
         return fake_collection
 
     fake_collection.add = add
-    fake_client = SimpleNamespace()
-    status = SimpleNamespace(value='MOCK')
+    fake_collection.get = lambda ids: {'metadatas': [{'document': 'sample.txt'}]}
 
-    def fake_create_chroma_client(chromaDB_path=None, collection_name=None, sentence_transformer_model=None):
-        return fake_client, fake_collection, status
+    class FakeClient:
+        def create_collection(self, name, embedding_function=None):
+            fake_collection.name = name or 'rag_collection'
+            return fake_collection
 
-    monkeypatch.setattr('rag_kmk.vector_db.database.create_chroma_client', fake_create_chroma_client)
-    return fake_create_chroma_client
+    class FakePersistentClient(FakeClient):
+        def __init__(self, path=None):
+            self.path = path
+
+        def get_collection(self, name, embedding_function=None):
+            fake_collection.name = name or 'rag_collection'
+            return fake_collection
+
+        def create_collection(self, name, embedding_function=None):
+            fake_collection.name = name or 'rag_collection'
+            return fake_collection
+
+    chromadb_mod = _types.ModuleType('chromadb')
+    chromadb_mod.Client = FakeClient
+    chromadb_mod.PersistentClient = FakePersistentClient
+
+    utils_mod = _types.ModuleType('chromadb.utils')
+    utils_mod.embedding_functions = SimpleNamespace(
+        SentenceTransformerEmbeddingFunction=lambda model_name, device='cpu': None
+    )
+
+    monkeypatch.setitem(sys.modules, 'chromadb', chromadb_mod)
+    monkeypatch.setitem(sys.modules, 'chromadb.utils', utils_mod)
+
+    # Return the fake collection for tests that want to inspect it
+    return fake_collection

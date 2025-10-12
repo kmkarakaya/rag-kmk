@@ -1,7 +1,7 @@
 # streamlit run .\run_interface2.py
 from rag_kmk.knowledge_base import build_knowledge_base
 from rag_kmk.vector_db import summarize_collection
-from rag_kmk.chat_flow import RAG_LLM, generateAnswer
+from rag_kmk.chat_flow import build_chatBot, generateAnswer
 from rag_kmk.vector_db.database import ChromaDBStatus
 import streamlit as st
 import os
@@ -170,7 +170,12 @@ def right_panel():
         
         # Generate the response
         with st.spinner("Thinking..."):
-            response = generateAnswer(RAG_LLM, st.session_state.knowledge_base, prompt)
+            if 'chat_client' not in st.session_state:
+                try:
+                    st.session_state.chat_client = build_chatBot({})
+                except Exception:
+                    st.session_state.chat_client = None
+            response = generateAnswer(st.session_state.get('chat_client'), st.session_state.knowledge_base, prompt)
         
         # Show the response below the question
         with messages_container:
