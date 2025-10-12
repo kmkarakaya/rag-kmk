@@ -11,14 +11,15 @@ Quick repo facts (signals)
 - Tests: `tests/` (pytest)
 - Docs: `docs/`
 - Local DB: `./chroma_db/` (persistent by default)
+- Local dev shell: PowerShell (Windows) — commands and examples assume PowerShell context
 
-What to do (short)
+What to do 
 
 - Prefer small, idiomatic Python changes. Keep compatibility with Python 3.8+.
 - When adding features: include one happy-path unit test + one edge-case test using pytest.
 - Add concise docstrings and update `docs/` or `README.md` with short usage snippets.
 
-What to avoid (short)
+What to avoid
 
 - Never add secrets or credentials; use env var placeholders (e.g. `os.environ.get("OPENAI_API_KEY")`).
 - Avoid large multi-file rewrites in a single change. No license-violating or proprietary code.
