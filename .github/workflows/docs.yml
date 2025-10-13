@@ -26,6 +26,6 @@ jobs:
                   codespell --skip="*.csv,*.geojson,*.json,*.js,*.html,*cff,./.git" --ignore-words-list="aci,hist"
             - name: PKG-TEST
               run: |
-                  python -m unittest discover tests/
+                  python -m pytest -q
             - run: mkdocs gh-deploy --force
 

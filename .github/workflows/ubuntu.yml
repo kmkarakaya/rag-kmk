@@ -28,9 +28,10 @@ jobs:
               uses: actions/setup-python@v5
               with:
                   python-version: ${{ matrix.config.py }}
+            - name: Upgrade pip and setuptools
+              run: python -m pip install --upgrade pip setuptools
             - name: Install GDAL
               run: |
-                  python -m pip install --upgrade pip
                   pip install --no-cache-dir Cython
                   pip install --find-links=https://girder.github.io/large_image_wheels --no-cache GDAL
             - name: Test GDAL installation
@@ -39,9 +40,10 @@ jobs:
                   gdalinfo --version
             - name: Install dependencies
               run: |
-                  pip install --user -r requirements.txt
+                  pip install -r requirements.txt
+                  if [ -f requirements_dev.txt ]; then pip install -r requirements_dev.txt; fi
                   pip install .
             - name: PKG-TEST
               run: |
-                  python -m unittest discover tests/
+                  python -m pytest -q
 

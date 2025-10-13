@@ -6,8 +6,8 @@ import os
 
 # Define status enum
 class ChromaDBStatus(Enum):
-    EXISTING_PERMANENT = "Existing permenant collection found"
-    NEW_PERMANENT = "New permenant collection created"
+    EXISTING_PERMANENT = "Existing permanent collection found"
+    NEW_PERMANENT = "New permanent collection created"
     NEW_MEMORY = "New in-memory collection created"
     FAILED_MEMORY = "New in-memory collection not created"
     
@@ -98,7 +98,7 @@ def create_chroma_client(chromaDB_path=_CHROMA_PATH_OMITTED, collection_name=Non
                     setattr(chroma_collection, '_chroma_client', chroma_client)
                 except Exception:
                     pass
-                print(f"\tCollection {collection_name} was created succesfully")
+                print(f"\tCollection {collection_name} was created successfully")
                 status = ChromaDBStatus.NEW_PERMANENT
             except Exception as e:
                 print("Failed to create collection:", e)
@@ -116,7 +116,7 @@ def create_chroma_client(chromaDB_path=_CHROMA_PATH_OMITTED, collection_name=Non
             else:
                 chroma_collection = chroma_client.get_or_create_collection(name=collection_name)
             status = ChromaDBStatus.NEW_MEMORY
-            print(f"\tCollection {collection_name} was created or retrieved succesfully")
+            print(f"\tCollection {collection_name} was created or retrieved successfully")
         except Exception as e:
             print(f"\tCollection {collection_name} was not created. Error: {e}")
             status = ChromaDBStatus.FAILED_MEMORY
