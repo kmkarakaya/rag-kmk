@@ -101,7 +101,7 @@ ENV/
 /site
 
 # Local Chroma DB
-chroma_db/
+chromaDB/
 
 # mypy
 .mypy_cache/

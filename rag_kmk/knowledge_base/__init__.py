@@ -1,4 +1,4 @@
-from .document_loader import build_knowledge_base
+from .document_loader import build_knowledge_base, load_and_add_documents
 
 """Knowledge-base package exports.
 
@@ -7,4 +7,4 @@ This package exposes a single `build_knowledge_base` function located in
 project now uses the consolidated `document_loader.py` implementation.
 """
 
-__all__ = ['build_knowledge_base']
+__all__ = ['build_knowledge_base', 'load_and_add_documents']

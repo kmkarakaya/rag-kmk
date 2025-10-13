@@ -106,19 +106,19 @@ def create_chroma_client(chromaDB_path=_CHROMA_PATH_OMITTED, collection_name=Non
 
     else:
         print("Using in-memory Client:")
-        print("\tCreating a new collection")
         chroma_client = Client()
         try:
+            # Use get_or_create_collection for robustness
             if embedding_function is not None:
-                chroma_collection = chroma_client.create_collection(
-                    collection_name,
+                chroma_collection = chroma_client.get_or_create_collection(
+                    name=collection_name,
                     embedding_function=embedding_function)
             else:
-                chroma_collection = chroma_client.create_collection(collection_name)
+                chroma_collection = chroma_client.get_or_create_collection(name=collection_name)
             status = ChromaDBStatus.NEW_MEMORY
-            print(f"\tCollection {collection_name} was created succesfully")
-        except:
-            print(f"\tCollection {collection_name} was not created")
+            print(f"\tCollection {collection_name} was created or retrieved succesfully")
+        except Exception as e:
+            print(f"\tCollection {collection_name} was not created. Error: {e}")
             status = ChromaDBStatus.FAILED_MEMORY
             return None, None, status
     

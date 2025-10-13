@@ -20,7 +20,7 @@
 
 ## Local development notes
 
-- The project stores a local persistent ChromaDB under `./chroma_db` by default.
-- To avoid checking runtime DB files into source control, add `chroma_db/` to your `.gitignore`.
+- The project stores a local persistent ChromaDB under `./chromaDB` by default.
+- To avoid checking runtime DB files into source control, add `chromaDB/` to your `.gitignore`.
 
 If you need to switch to an in-memory collection for quick tests, set `vector_db.chromaDB_path` to `null` in `rag_kmk/config/config.yaml`.

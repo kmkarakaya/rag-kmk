@@ -1,4 +1,3 @@
-
 # Copilot repository instructions (compact)
 
 This file contains compact, contributor-facing instructions to help Copilot-style agents and humans work on the project consistently.
@@ -13,7 +12,7 @@ Quick signals
 - Runners/examples: `run.py`, `run_interface.py`, `run_interface2.py`
 - Tests: `tests/` (pytest)
 - Docs: `docs/`
-- Local DB: `./chroma_db/` (persistent by default)
+- Local DB: `./chromaDB/` (persistent by default)
 
 IMPORTANT: `run.py` is an example entrypoint and MUST NOT be changed to add features or fix bugs. All feature or bug-fix work should be implemented inside the library code under `rag_kmk/`. The runner exists only as an example and distribution entry point.
 

@@ -14,6 +14,6 @@ def test_load_repo_chromadb():
     """
     from rag_kmk.knowledge_base import build_knowledge_base
 
-    kb, status = build_knowledge_base(chromaDB_path=str(Path('chromaDB').resolve()))
+    kb, status = build_knowledge_base(document_directory_path=None, chromaDB_path=str(Path('chromaDB').resolve()))
     assert kb is not None
     assert status is not None

@@ -17,7 +17,7 @@ def sample_docs_dir():
 
 @pytest.fixture
 def tmp_chroma_dir(tmp_path, monkeypatch):
-    path = tmp_path / "chroma_db"
+    path = tmp_path / "chromaDB"
     path.mkdir()
     # Override config for tests that read from CONFIG
     monkeypatch.setitem(CONFIG, 'vector_db', CONFIG.get('vector_db', {}))
@@ -47,6 +47,9 @@ def mock_chroma_client(monkeypatch):
         def create_collection(self, name, embedding_function=None):
             fake_collection.name = name or 'rag_collection'
             return fake_collection
+
+        def get_or_create_collection(self, name, embedding_function=None):
+            return self.create_collection(name, embedding_function)
 
     class FakePersistentClient(FakeClient):
         def __init__(self, path=None):

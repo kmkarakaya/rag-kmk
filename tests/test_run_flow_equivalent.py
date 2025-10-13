@@ -39,7 +39,7 @@ def test_run_equivalent_persistent_only(monkeypatch, tmp_path):
     import rag_kmk.chat_flow as chat_flow
 
     # Use the real chromaDB folder in repo root
-    kb, status = build_knowledge_base(chromaDB_path=str(Path('chromaDB').resolve()))
+    kb, status = build_knowledge_base(document_directory_path=None, chromaDB_path=str(Path('chromaDB').resolve()))
     summarize_collection(kb)
     client = chat_flow.build_chatBot({})
     chat_flow.run_rag_pipeline(client, kb)

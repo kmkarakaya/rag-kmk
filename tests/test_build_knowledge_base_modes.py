@@ -35,10 +35,10 @@ def test_mode1_persistent_plus_add(tmp_path, monkeypatch):
         pytest.skip("sample documents not present in tests/sample_documents")
 
     # create a fake persistent directory
-    persistent_dir = tmp_path / "chroma_db_persistent"
+    persistent_dir = tmp_path / "chromaDB_persistent"
     persistent_dir.mkdir()
 
-    from rag_kmk.knowledge_base.document_loader import build_knowledge_base
+    from rag_kmk.knowledge_base import build_knowledge_base
     from rag_kmk.vector_db.database import ChromaDBStatus
 
     kb, status = build_knowledge_base(document_directory_path=str(sample), chromaDB_path=str(persistent_dir))
@@ -57,24 +57,40 @@ def test_mode1_persistent_plus_add(tmp_path, monkeypatch):
 def test_mode2_persistent_only(tmp_path):
     """
     Mode 2: load existing chromadb collection without adding new documents.
-    We simulate an existing persistent collection directory and call without docs.
+    We simulate an existing persistent collection by first creating one with
+    a document, then loading it again without adding new documents.
     """
+    sample = _sample_docs_path()
+    if sample is None:
+        pytest.skip("sample documents not present in tests/sample_documents")
+
     # create a fake persistent directory
-    persistent_dir = tmp_path / "chroma_db_persistent2"
+    persistent_dir = tmp_path / "chromaDB_persistent2"
     persistent_dir.mkdir()
 
-    from rag_kmk.knowledge_base.document_loader import build_knowledge_base
+    from rag_kmk.knowledge_base import build_knowledge_base
     from rag_kmk.vector_db.database import ChromaDBStatus
 
-    kb, status = build_knowledge_base(chromaDB_path=str(persistent_dir))
+    # 1. Create and populate the persistent DB
+    kb_initial, status_initial = build_knowledge_base(
+        document_directory_path=str(sample),
+        chromaDB_path=str(persistent_dir)
+    )
+    assert kb_initial is not None
+    assert kb_initial.count() > 0
+    initial_count = kb_initial.count()
+
+    # 2. Load the existing collection without adding new documents
+    kb, status = build_knowledge_base(document_directory_path=None, chromaDB_path=str(persistent_dir))
 
     assert kb is not None
-    assert status in (ChromaDBStatus.EXISTING_PERMANENT, ChromaDBStatus.NEW_PERMANENT)
+    # This time it must be an existing permanent collection
+    assert status == ChromaDBStatus.EXISTING_PERMANENT
 
-    # For persistent-only mode (no documents provided) the collection may be empty
+    # The count should be the same as before, proving no new docs were added
+    # and existing ones were loaded.
     assert hasattr(kb, 'count'), "Returned collection object must implement count()"
-    # count() should be non-negative and the call should not raise
-    _ = kb.count()
+    assert kb.count() == initial_count
 
 
 @pytest.mark.skipif(not _import_chroma(), reason="chromadb not installed")
@@ -87,7 +103,7 @@ def test_mode3_inmemory_plus_add(monkeypatch):
     if sample is None:
         pytest.skip("sample documents not present in tests/sample_documents")
 
-    from rag_kmk.knowledge_base.document_loader import build_knowledge_base
+    from rag_kmk.knowledge_base import build_knowledge_base
     from rag_kmk.vector_db.database import ChromaDBStatus
 
     kb, status = build_knowledge_base(document_directory_path=str(sample))
@@ -98,3 +114,37 @@ def test_mode3_inmemory_plus_add(monkeypatch):
     # In-memory creation with documents should result in a non-empty collection
     assert hasattr(kb, 'count'), "Returned collection object must implement count()"
     assert kb.count() > 0, "In-memory collection should contain documents after adding sample documents"
+
+
+@pytest.mark.skipif(not _import_chroma(), reason="chromadb not installed")
+def test_load_and_add_documents_public_api(tmp_path):
+    """
+    Test the public `load_and_add_documents` function directly.
+    It should take an existing collection and add documents to it.
+    """
+    from rag_kmk.knowledge_base import load_and_add_documents
+    from rag_kmk.vector_db.database import create_chroma_client
+    from rag_kmk import CONFIG
+
+    # 1. Create an empty in-memory collection to pass to the function
+    _, collection, _ = create_chroma_client(
+        chromaDB_path=None,
+        collection_name=f"test_collection_{tmp_path.name}"
+    )
+    assert collection is not None
+    assert collection.count() == 0
+
+    # 2. Create a temporary directory with a sample document
+    sample_dir = tmp_path / "docs"
+    sample_dir.mkdir()
+    (sample_dir / "test.txt").write_text("This is a test document.")
+
+    # 3. Call the function to load documents into the collection
+    files_processed, errors = load_and_add_documents(
+        collection, str(sample_dir), CONFIG
+    )
+
+    # 4. Assert that documents were added
+    assert files_processed is True
+    assert not errors
+    assert collection.count() > 0

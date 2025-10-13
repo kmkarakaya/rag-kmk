@@ -17,16 +17,16 @@ print("--------------------- ORIGINAL CONFIG ---------------------\n", CONFIG['l
 CONFIG['llm'].update({'model': 'gemini-2.5-flash'})
 print("--------------------- AFTER CONFIG UPDATE ---------------------\n", CONFIG['llm'])
     
-# 1) Configure (example)  2) build an in-memory knowledge base  3) run a single pipeline call
+# Sample usage modes:
 
-# Load the existing chromadb collection and add new documents to it
+# 1. Load the existing chromadb collection and add new documents to it
 #kb, chromaDB_status = build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB')
 
-# Load the existing chromadb collection without adding new documents
-#kb, chromaDB_status = build_knowledge_base( chromaDB_path=r'.\chromaDB')
+# 2. Load the existing chromadb collection without adding new documents
+kb, chromaDB_status = build_knowledge_base(document_directory_path=None, chromaDB_path=r'.\chromaDB')
 
-# Create a new in-memory chromadb collection and add new documents to it
-kb, chromaDB_status = build_knowledge_base(document_directory_path=r'.\\tests\\sample_documents')
+# 3. Create a new in-memory chromadb collection and add new documents to it
+#kb, chromaDB_status = build_knowledge_base(document_directory_path=r'.\\tests\\sample_documents')
 
 print("--------------------- CHROMADB STATUS ---------------------\n", chromaDB_status.value)
 
