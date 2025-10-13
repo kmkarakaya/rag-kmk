@@ -7,7 +7,7 @@ This file contains compact, contributor-facing instructions to help Copilot-styl
 **rag-kmk** is a small educational Retrieval-Augmented Generation (RAG) Python project demonstrating document ingestion, vector indexing (Chroma), and a simple chat/query flow. It's packaged as a Python library under `rag_kmk/` and can be installed with `pip install rag-kmk`.
 
 Quick signals
-- Language: Python (>=3.8 from `pyproject.toml`)
+- Language: Python (>=3.9 from `pyproject.toml`)
 - Main code: `rag_kmk/` (document loader, text splitter, vector DB wrapper, chat flow)
 - Runners/examples: `run.py`, `run_interface.py`, `run_interface2.py`
 - Tests: `tests/` (pytest)
@@ -38,7 +38,7 @@ Reproducible local development uses a `conda` environment named `rag`. Use these
 1) Create and activate the environment
 
 ```powershell
-conda create -n rag python=3.10 -y
+conda create -n rag python=3.12 -y
 conda activate rag
 ```
 
