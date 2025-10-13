@@ -6,7 +6,9 @@ used as an example and a distribution entry point only.
 NEVER CHANGE the code in this file to add features or fix bugs.
 All such changes must be made in the library code itself.
 """
-
+# pip uninstall -y rag-kmk
+# pip cache purge
+# pip install --no-cache-dir --upgrade rag-kmk
 from rag_kmk import CONFIG
 from rag_kmk.knowledge_base import build_knowledge_base
 import rag_kmk.chat_flow as chat_flow
