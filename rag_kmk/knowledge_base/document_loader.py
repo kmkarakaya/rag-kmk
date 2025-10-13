@@ -1,5 +1,5 @@
 import os
-import fitz  # PyMuPDF
+import fitz  # PyMuPDF==1.26.5
 import logging
 from docx.opc.exceptions import PackageNotFoundError
 import rag_kmk

@@ -1,7 +1,11 @@
 import os
 import sys
 import pytest
+import warnings
 from types import SimpleNamespace
+
+# Suppress deprecation warnings from PyMuPDF (fitz) SWIG bindings
+warnings.filterwarnings("ignore", category=DeprecationWarning, module="fitz")
 
 # Make package importable when running tests from tests/ directory
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
