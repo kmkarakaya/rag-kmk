@@ -7,7 +7,7 @@ explicitly at runtime.
 
 __author__ = "Murat Karakaya"
 __email__ = "kmkarakaya@gmail.com"
-__version__ = "0.0.50"
+__version__ = "0.0.51"
 
 from .config.config import load_config, mask_config
 
