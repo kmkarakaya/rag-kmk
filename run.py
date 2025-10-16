@@ -28,18 +28,13 @@ print("--------------------- AFTER CONFIG UPDATE ---------------------\n", CONFI
 # kb, chromaDB_status = kb_loader.build_knowledge_base(
 #     collection_name,
 #     document_directory_path=r'.\tests\sample_documents',
-#     create_new=True,
 #     add_documents=True
 # )
 
-# # 2) Open an existing collection by name (fails if DB or collection missing).
-# #    Uncomment and set collection_name to use.
+# 2) Open an existing collection by name (fails if DB or collection missing).
+#    Use load_knowledge_base for open-only semantics.
 collection_name = "my_new_collection"
-kb, chromaDB_status = kb_loader.build_knowledge_base(
-    collection_name,
-    create_new=True,
-    add_documents=False
-)
+kb, chromaDB_status = kb_loader.load_knowledge_base(collection_name)
 
 
 print("--------------------- CHROMADB STATUS ---------------------\n", getattr(chromaDB_status, "value", str(chromaDB_status)))

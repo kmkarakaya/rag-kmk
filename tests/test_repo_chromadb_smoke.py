@@ -12,8 +12,8 @@ def test_load_repo_chromadb():
     ensure it can be opened without raising an exception. This doesn't assert
     on counts because different stored DB formats may vary.
     """
-    from rag_kmk.knowledge_base import build_knowledge_base
+    from rag_kmk.knowledge_base.document_loader import load_knowledge_base
 
-    kb, status = build_knowledge_base(document_directory_path=None, chromaDB_path=str(Path('chromaDB').resolve()))
+    kb, status = load_knowledge_base(collection_name='default', cfg={'vector_db': {'chromaDB_path': str(Path('chromaDB').resolve())}})
     assert kb is not None
     assert status is not None

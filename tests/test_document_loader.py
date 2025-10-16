@@ -11,7 +11,7 @@ def test_build_knowledge_base_with_mock(mock_chroma_client, tmp_path):
     f = docs / 'sample.txt'
     f.write_text('Hello world. This is a test document.')
 
-    collection, status = build_knowledge_base(document_directory_path=str(docs), chromaDB_path=None)
+    collection, status = build_knowledge_base(collection_name='test_mock', document_directory_path=str(docs), add_documents=True, chromaDB_path=None)
 
     # With the mocked create_chroma_client, build_knowledge_base returns the fake collection and status
     assert status is not None
@@ -80,7 +80,6 @@ def test_build_knowledge_base_create_and_ingest(tmp_path, monkeypatch):
     kb, status = dl.build_knowledge_base(
         collection_name=collection_name,
         document_directory_path=str(doc_dir),
-        create_new=True,
         add_documents=True,
         cfg=cfg
     )
@@ -100,13 +99,9 @@ def test_build_knowledge_base_open_existing(tmp_path, monkeypatch):
     monkeypatch.setattr(vdb_database, "create_chroma_client", _fake_create_chroma_client)
     monkeypatch.setattr(dl, "add_document_to_collection", lambda ids, metas, chunks, collection: None)
 
-    kb, status = dl.build_knowledge_base(
-        collection_name="test_coll",
-        document_directory_path=None,
-        create_new=False,
-        add_documents=False,
-        cfg=cfg
-    )
+    # Use load_knowledge_base for open-only semantics
+    from rag_kmk.knowledge_base.document_loader import load_knowledge_base
+    kb, status = load_knowledge_base(collection_name="test_coll", cfg=cfg)
 
     assert status == vdb_database.ChromaDBStatus.OK
     assert kb is not None

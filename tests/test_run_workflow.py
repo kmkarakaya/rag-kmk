@@ -43,7 +43,7 @@ def test_run_main_noninteractive_invokes_pipeline(monkeypatch, tmp_path):
     from rag_kmk.knowledge_base import build_knowledge_base
     from rag_kmk.vector_db import summarize_collection
 
-    kb, chromaDB_status = build_knowledge_base(document_directory_path=str(docs_dir))
+    kb, chromaDB_status = build_knowledge_base(collection_name='run_workflow', document_directory_path=str(docs_dir), add_documents=True, chromaDB_path=None)
     # summarizing should not raise
     summarize_collection(kb)
     client = real_chat_flow.build_chatBot({})
