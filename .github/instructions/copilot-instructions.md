@@ -4,11 +4,11 @@
 
 - **rag-kmk** is an educational Python Retrieval-Augmented Generation (RAG) library.
 - Main components:
-	- `rag_kmk/`: Core library (document loader, text splitter, vector DB, chat flow)
-	- `run.py`, `run_interface.py`, `run_interface2.py`: Example runners (do not modify for features/bugfixes)
-	- `tests/`: Pytest-based unit tests
-	- `docs/`: Documentation
-	- `chromaDB/`: Local persistent ChromaDB (default; in-memory support has been removed)
+  - `rag_kmk/`: Core library (document loader, text splitter, vector DB, chat flow)
+  - `run.py`: Example runner (do not modify for features/bugfixes)
+  - `tests/`: Pytest-based unit tests
+  - `docs/`: Documentation
+  - `chromaDB/`: Local persistent ChromaDB (default; in-memory support has been removed)
 - Configuration is managed via `rag_kmk/config/config.yaml` and loaded through library helpers.
 
 ## Architecture & Data Flow
