@@ -10,8 +10,9 @@ All such changes must be made in the library code itself.
 # pip cache purge
 # pip install --no-cache-dir --upgrade rag-kmk
 from rag_kmk import CONFIG
-from rag_kmk.knowledge_base import build_knowledge_base
+from rag_kmk.knowledge_base import document_loader as kb_loader
 import rag_kmk.chat_flow as chat_flow
+from rag_kmk.vector_db import database as vdb_database
 from rag_kmk.vector_db import summarize_collection
 
 
@@ -19,16 +20,20 @@ print("--------------------- ORIGINAL CONFIG ---------------------\n", CONFIG['l
 CONFIG['llm'].update({'model': 'gemini-2.5-flash'})
 print("--------------------- AFTER CONFIG UPDATE ---------------------\n", CONFIG['llm'])
     
-# Sample usage modes:
+# Sample usage modes using explicit flags:
 
-# 1. Load the existing chromadb collection and add new documents to it
-#kb, chromaDB_status = build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB')
+# 1. Load the existing persistent ChromaDB collection and add new documents to it
+# kb, chromaDB_status = kb_loader.build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB', create_new=False, add_documents=True)
 
-# 2. Load the existing chromadb collection without adding new documents
-kb, chromaDB_status = build_knowledge_base(document_directory_path=None, chromaDB_path=r'.\chromaDB')
+# 2. Load the existing persistent ChromaDB collection without adding new documents
+kb, chromaDB_status = kb_loader.build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB', create_new=False, add_documents=False)
 
-# 3. Create a new in-memory chromadb collection and add new documents to it
-#kb, chromaDB_status = build_knowledge_base(document_directory_path=r'.\\tests\\sample_documents')
+# 3. Create a new in-memory ChromaDB collection and add new documents to it
+# kb, chromaDB_status = kb_loader.build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=None, create_new=True, add_documents=True)
+
+# 4. Create a new persistent ChromaDB collection and add new documents to it
+#kb, chromaDB_status = kb_loader.build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB', create_new=True, add_documents=True)
+
 
 print("--------------------- CHROMADB STATUS ---------------------\n", chromaDB_status.value)
 

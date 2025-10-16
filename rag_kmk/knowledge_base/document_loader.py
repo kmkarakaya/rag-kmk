@@ -9,16 +9,56 @@ from rag_kmk.knowledge_base.text_splitter import (
 	add_meta_data,
 	add_document_to_collection,
 )
-import rag_kmk.vector_db.database as vdb_database
-from rag_kmk.vector_db.database import ChromaDBStatus
+from typing import Optional, Tuple
+import rag_kmk
+from rag_kmk.config.config import load_config
+from rag_kmk.vector_db import database as vdb_database
 
 
 log = logging.getLogger(__name__)
 
 
+def _resolve_collection_count(collection) -> int:
+    """
+    Robustly determine number of items in a chroma collection across chromadb versions.
+    """
+    try:
+        res = collection.count()
+        if isinstance(res, int):
+            return res
+        if isinstance(res, dict):
+            return int(res.get("count") or sum(res.values()))
+    except TypeError:
+        try:
+            res = collection.count({})
+            if isinstance(res, int):
+                return res
+            if isinstance(res, dict):
+                return int(res.get("count") or sum(res.values()))
+        except Exception:
+            pass
+    except Exception:
+        pass
+
+    try:
+        data = collection.get(include=["ids"])
+        if isinstance(data, dict) and "ids" in data:
+            return len(data["ids"])
+        if isinstance(data, dict):
+            for v in data.values():
+                if isinstance(v, list):
+                    return len(v)
+        if isinstance(data, list):
+            return len(data)
+    except Exception:
+        pass
+
+    return 0
+
+
 def load_and_add_documents(chroma_collection, document_directory_path, cfg):
 	"""Scans a directory for documents, processes them, and adds them to the collection."""
-	current_id = chroma_collection.count()
+	current_id = _resolve_collection_count(chroma_collection)
 	log.debug(f"Current number of document chunks in Vector DB: {current_id}")
 
 	# Validate directory
@@ -91,16 +131,71 @@ def load_and_add_documents(chroma_collection, document_directory_path, cfg):
 
 				# Splitting and storing
 				if document:
-					text_chunksinChar = convert_Pages_ChunkinChar(document)
-					text_chunksinTokens = convert_Chunk_Token(text_chunksinChar)
-					ids, metadatas = add_meta_data(text_chunksinTokens, filename, current_id)
-					current_id += len(text_chunksinTokens)
-					add_document_to_collection(ids, metadatas, text_chunksinTokens, chroma_collection)
-					files_processed = True
-					log.debug(f"Document {filename} added to the collection.")
-					log.debug(f"Current number of document chunks in Vector DB: {chroma_collection.count()}")
+					try:
+						# compute chunks
+						text_chunksinChar = convert_Pages_ChunkinChar(document)
+						text_chunksinTokens = convert_Chunk_Token(text_chunksinChar)
+
+						# Informational debug output about splitting
+						print(f"Total number of chunks (document split by max char = {len(text_chunksinChar)}): {len(text_chunksinChar)}")
+						print(f"Total number of chunks (document split by {cfg.get('tokens_per_chunk', 'tokens_per_chunk')} tokens per chunk): {len(text_chunksinTokens)}")
+
+						ids, metadatas = add_meta_data(text_chunksinTokens, filename, current_id)
+
+						# Print before-insert collection size (use current_id as starting point)
+						before_size = current_id
+						print("Before inserting, the size of the collection: ", before_size)
+
+						# Print a short preview of metadatas (avoid huge dumps)
+						try:
+							_preview = metadatas if (isinstance(metadatas, list) and len(metadatas) <= 50) else (metadatas[:50] if isinstance(metadatas, list) else "[unavailable]")
+						except Exception:
+							_preview = "[unavailable]"
+						print("***** metadatas: *****")
+						print(_preview)
+
+						# perform insertion
+						current_id += len(text_chunksinTokens)
+						add_document_to_collection(ids, metadatas, text_chunksinTokens, chroma_collection)
+						files_processed = True
+						log.debug(f"Document {filename} added to the collection.")
+
+						# If the DB module registered a client for this collection, call persist()
+						try:
+							client = vdb_database.get_client_for_collection(chroma_collection)
+							persist_path = getattr(client, "_persist_path", None) if client is not None else None
+							if client is not None:
+								if hasattr(client, "persist"):
+									print(f"Persisting chromadb client to disk at: {persist_path or '<unknown>'}")
+									try:
+										client.persist()
+										print("chromadb client.persist() completed.")
+									except Exception as e:
+										log.warning("chromadb client.persist() raised: %s", e)
+								elif hasattr(client, "persist_to_disk"):
+									try:
+										client.persist_to_disk()
+									except Exception as e:
+										log.warning("chromadb client.persist_to_disk() raised: %s", e)
+								# verify persist folder contents if we know the path
+								if persist_path:
+									try:
+										pfiles = os.listdir(os.path.abspath(persist_path))
+										print("Persist directory now contains:", len(pfiles), "entries (example):", pfiles[:10])
+									except Exception as e:
+										log.warning("Failed to inspect persist directory %r: %s", persist_path, e)
+						except Exception:
+							# non-fatal
+							pass
+
+						# After insert, compute and print new size (robust)
+						after_size = _resolve_collection_count(chroma_collection)
+						print("After inserting, the size of the collection: ", after_size)
+					except Exception as e:
+						log.error(f"Failed to process and add document '{filename}' to the collection: {e}")
+						error_messages.append(f"Failed to process and add document '{filename}': {e}")
 			except (FileNotFoundError, fitz.EmptyFileError, PackageNotFoundError, UnicodeDecodeError) as e:
-				error_messages.append(f"Failed to load document '{filename}': {e}.  Try specifying encoding.")
+				error_messages.append(f"Failed to load document '{filename}': {e}. Try specifying encoding.")
 				log.exception(f'Failed to load document from {file_path}')
 				continue
 			except Exception as e:
@@ -111,82 +206,149 @@ def load_and_add_documents(chroma_collection, document_directory_path, cfg):
 		else:
 			log.debug(f'Skipping unsupported file type: {file_path}')
 	
+	if not files_processed:
+		log.error("No files were successfully processed. Errors encountered:")
+		for error in error_messages:
+			log.error(f"  - {error}")
+	
 	return files_processed, error_messages
 
 
-def build_knowledge_base(document_directory_path=None, chromaDB_path=None, config=None):
-	"""Build or load the knowledge base into Chroma.
+def build_knowledge_base(
+    document_directory_path: Optional[str] = vdb_database._CHROMA_PATH_OMITTED,
+    chromaDB_path: Optional[str] = vdb_database._CHROMA_PATH_OMITTED,
+    config: Optional[dict] = None,
+    create_new: bool = False,
+    add_documents: bool = True,
+) -> Tuple[Optional[object], Optional[object]]:
+    """
+    Build or load a ChromaDB-backed knowledge base.
 
-	This is the project's single document loader. It supports .txt, .pdf,
-	and .docx files. It creates either an in-memory Chroma collection or
-	connects to a persistent Chroma DB, then converts documents to text,
-	splits them into chunks, and inserts embeddings via the vector DB
-	helper functions.
+    Note:
+    - If the caller omits chromaDB_path (the default sentinel), the function will prefer the config value.
+    - If the caller explicitly passes chromaDB_path=None, that is treated as an explicit request for an in-memory collection
+      when create_new=True.
+    """
+    # Resolve config: prefer explicit config arg, then package-level CONFIG, then load_config()
+    cfg = config or getattr(rag_kmk, "CONFIG", None) or load_config()
+    vcfg = cfg.get("vector_db", {}) if isinstance(cfg, dict) else {}
 
-	Returns:
-		(chroma_collection, chromaDB_status)
-	"""
-	# Resolve config (prefer explicit param, fallback to module-level CONFIG)
-	cfg = config if config is not None else getattr(rag_kmk, 'CONFIG', {}) or {}
+    collection_name = vcfg.get("collection_name", "default_collection")
 
-	log.debug(f"Entering build_knowledge_base with document_directory_path='{document_directory_path}' and chromaDB_path='{chromaDB_path}'")
+    # Distinguish omitted vs explicit None
+    if chromaDB_path is vdb_database._CHROMA_PATH_OMITTED:
+        resolved_chroma_path = vcfg.get("chromaDB_path")
+        chroma_path_was_explicit = False
+    else:
+        resolved_chroma_path = chromaDB_path
+        chroma_path_was_explicit = True
 
-	# Three explicit behaviors depending on parameters:
-	# 1) chromaDB_path provided and document_directory_path provided =>
-	#    load persistent collection and add new documents.
-	# 2) chromaDB_path provided and document_directory_path is None =>
-	#    load persistent collection only (do not add documents).
-	# 3) chromaDB_path is None and document_directory_path provided =>
-	#    create an in-memory collection and add documents.
+    # Normalize legacy folder name 'chroma_db' -> 'chromaDB'
+    if isinstance(resolved_chroma_path, str):
+        rp_low = resolved_chroma_path.lower()
+        if "chroma_db" in rp_low:
+            normalized = resolved_chroma_path.replace("chroma_db", "chromaDB").replace("chroma_db".capitalize(), "chromaDB")
+            if normalized != resolved_chroma_path:
+                log.info(f"Normalizing chromaDB_path from {resolved_chroma_path!r} to {normalized!r}")
+                print(f"[INFO] Normalizing chromaDB_path from {resolved_chroma_path!r} to {normalized!r}")
+                resolved_chroma_path = normalized
 
-	# If neither path is provided, there's nothing to do.
-	if not chromaDB_path and not document_directory_path:
-		log.warning("Neither chromaDB_path nor document_directory_path provided. Nothing to do.")
-		return None, None
+    # Workflow debug prints
+    print("---- build_knowledge_base workflow ----")
+    print(f"collection_name: {collection_name}")
+    print(f"chromaDB_path (resolved): {resolved_chroma_path!r}  (explicit arg provided: {chroma_path_was_explicit})")
+    print(f"  (type: {type(resolved_chroma_path)})")
+    print(f"create_new: {create_new}   add_documents: {add_documents}")
+    print(f"vector_db config (vcfg): {vcfg}")
 
-	# Helper to extract vector DB defaults
-	db_cfg = cfg.get('vector_db', {}) if isinstance(cfg, dict) else {}
-	collection_name = db_cfg.get('collection_name')
-	sentence_transformer_model = db_cfg.get('embedding_model')
+    # If no resolved path and create_new is False -> error
+    if resolved_chroma_path is None and not create_new:
+        raise ValueError(
+            "chromaDB_path missing: caller did not provide a persistent path and create_new is False. "
+            "Either provide a chromaDB_path, enable create_new to create a new collection, or pass an explicit "
+            "chromaDB_path=None with create_new=True to create an in-memory collection."
+        )
 
-	# Step 1: Get or create the ChromaDB collection.
-	# The create_chroma_client function handles both persistent (with path) and in-memory (path is None).
-	chroma_client, chroma_collection, chromaDB_status = vdb_database.create_chroma_client(
-		chromaDB_path=chromaDB_path,
-		collection_name=collection_name,
-		sentence_transformer_model=sentence_transformer_model,
-	)
+    # If caller explicitly requested in-memory (passed None explicitly) but didn't ask to create_new -> error
+    if chroma_path_was_explicit and resolved_chroma_path is None and not create_new:
+        raise ValueError("Explicit chromaDB_path=None was provided without create_new=True; cannot use in-memory without create_new.")
 
-	# Sanity check: if a persistent path was requested, we should not get an in-memory collection.
-	if chromaDB_path and chromaDB_status == ChromaDBStatus.NEW_MEMORY:
-		raise RuntimeError(
-			"create_chroma_client returned an in-memory collection while a persistent chromaDB_path was requested."
-		)
+    chroma_collection, chroma_status = vdb_database.create_chroma_client(
+        collection_name=collection_name,
+        chromaDB_path=resolved_chroma_path,
+        create_new=create_new,
+        config=cfg,
+    )
 
-	if chroma_collection is None:
-		log.error("Chroma collection not available; aborting knowledge base build.")
-		return None, chromaDB_status
+    # Print status returned from DB factory to make the workflow clear
+    print("--------------------- CHROMADB STATUS ---------------------")
+    try:
+        print(chroma_status.value)
+    except Exception:
+        print(str(chroma_status))
 
-	# Step 2: If a document directory is provided, load and add documents.
-	if not document_directory_path:
-		log.debug("No document directory provided. Skipping document loading.")
-		return chroma_collection, chromaDB_status
+    # Handle missing persistent collection specifically: return status instead of raising
+    if chroma_status == vdb_database.ChromaDBStatus.MISSING_PERSISTENT:
+        err = (
+            f"Requested persistent collection '{collection_name}' was not found in '{resolved_chroma_path}'.\n"
+            "Requested intent: load existing persistent collection (create_new=False).\n"
+            "Diagnostics:\n"
+            f"  - resolved_chroma_path: {resolved_chroma_path!r}\n"
+            f"  - collection_name: {collection_name}\n\n"
+            "Recommended actions:\n"
+            "  * Verify the path points to the correct ChromaDB persist directory.\n"
+            "  * Confirm the collection name exists in that DB (use Chroma tooling or check directory contents).\n"
+            "  * If you want to create a new persistent collection at this path, re-run with create_new=True.\n"
+        )
+        log.error(err)
+        # Return status so caller can handle (run.py will print 'No documents loaded.')
+        return None, chroma_status
 
-	files_processed, error_messages = load_and_add_documents(
-		chroma_collection, document_directory_path, cfg
-	)
+    # If create_chroma_client failed, return status instead of raising
+    if chroma_status == vdb_database.ChromaDBStatus.ERROR or chroma_collection is None:
+        log.error(
+            "Failed to create or load ChromaDB collection.\n"
+            "Debug details:\n"
+            f"  - collection_name: {collection_name}\n"
+            f"  - resolved_chroma_path: {resolved_chroma_path!r} (explicit arg: {chroma_path_was_explicit})\n"
+            f"  - create_new: {create_new}\n"
+            f"  - add_documents: {add_documents}\n"
+            f"  - CONFIG['vector_db']: {vcfg}\n"
+        )
+        return None, chroma_status
 
-	log.info(f'Knowledge Base populated by a total number of {chroma_collection.count()} document chunks from {document_directory_path}.')
-	if not files_processed:
-		log.warning(f"No files were processed successfully from the directory: {document_directory_path}.")
-		log.warning("Please check the directory path and the file types.")
-		return None, chromaDB_status  # Return status with collection even if no files were added
-	if error_messages:
-		log.error("Errors encountered during processing:")
-		for msg in error_messages:
-			log.error(msg)
-	return chroma_collection, chromaDB_status
+    # Catch mismatch: persistent requested but got NEW_MEMORY -> log and return status (avoid raising)
+    if resolved_chroma_path is not None and create_new and chroma_status == vdb_database.ChromaDBStatus.NEW_MEMORY:
+        msg = (
+            "Requested to create new persistent collection at path but database factory returned NEW_MEMORY. "
+            f"resolved_chroma_path={resolved_chroma_path!r} create_new={create_new}"
+        )
+        log.error(msg)
+        return None, chroma_status
 
+    # Only ingest documents when explicitly allowed and a directory path is provided
+    if add_documents and document_directory_path and chroma_collection is not None:
+        print("--------------------- INGEST DOCUMENTS ---------------------")
+        print(f"Document directory: {document_directory_path}")
+        print("Starting load_and_add_documents() ...")
+        load_and_add_documents(chroma_collection, document_directory_path, cfg)
+        print("Finished load_and_add_documents().")
+    else:
+        # explicit skip of ingestion or no collection available
+        if not add_documents:
+            print("add_documents=False -> skipping ingestion.")
+        elif not document_directory_path:
+            print("No document_directory_path provided -> skipping ingestion.")
+        else:
+            print("No chroma collection available -> skipping ingestion.")
 
-__all__ = ['build_knowledge_base', 'load_and_add_documents']
+    # Provide a concise summary if collection exists
+    if chroma_collection is not None:
+        print("--------------------- CHROMADB SUMMARY ---------------------\n")
+        try:
+            summarize = vdb_database.summarize_collection(chroma_collection)
+        except Exception as e:
+            print("Failed to summarize collection:", e)
+
+    return chroma_collection, chroma_status
 
