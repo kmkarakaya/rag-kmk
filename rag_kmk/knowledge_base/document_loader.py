@@ -17,6 +17,11 @@ from rag_kmk.vector_db import database as vdb_database
 
 log = logging.getLogger(__name__)
 
+# Local sentinel to reliably detect when callers omit chromaDB_path or
+# document_directory_path. Using a sentinel defined in this module avoids
+# issues caused by comparing object identity across separate module imports.
+_CHROMA_PATH_OMITTED_LOCAL = object()
+
 
 def _resolve_collection_count(collection) -> int:
     """
@@ -60,6 +65,17 @@ def load_and_add_documents(chroma_collection, document_directory_path, cfg):
 	"""Scans a directory for documents, processes them, and adds them to the collection."""
 	current_id = _resolve_collection_count(chroma_collection)
 	log.debug(f"Current number of document chunks in Vector DB: {current_id}")
+
+	# Document directory: <object object ...> was causing TypeError in os.stat
+	# Guard against non-path inputs (None or unexpected sentinel); skip ingestion.
+	if not document_directory_path or not isinstance(document_directory_path, (str, bytes, os.PathLike)):
+		print(f"Document directory: {document_directory_path!r} (invalid or None) - skipping document ingestion.")
+		return
+
+	# Now safe to check filesystem
+	if not os.path.isdir(document_directory_path):
+		print(f"Document directory not found: {document_directory_path!r} - skipping document ingestion.")
+		return
 
 	# Validate directory
 	if not os.path.isdir(document_directory_path):
@@ -215,13 +231,7 @@ def load_and_add_documents(chroma_collection, document_directory_path, cfg):
 
 
 def build_knowledge_base(
-        document_directory_path: Optional[str] = vdb_database._CHROMA_PATH_OMITTED,
-        chromaDB_path: Optional[str] = vdb_database._CHROMA_PATH_OMITTED,
-        config: Optional[dict] = None,
-        create_new: bool = False,
-        add_documents: bool = True,
-        force_persistence: Optional[bool] = None,  # New parameter: True => persistent, False => in-memory, None => unchanged behavior
-) -> Tuple[Optional[object], Optional[object]]:
+	document_directory_path=None, chromaDB_path=None, create_new=False, add_documents=False, force_persistence=None, cfg=None):
 	"""
 	Build or load a ChromaDB-backed knowledge base.
 
@@ -358,7 +368,15 @@ def build_knowledge_base(
 	# treat its return value as authoritative for tests. Do NOT fall back to the
 	# package-level CONFIG when load_config() is monkeypatched to return an empty
 	# dict in tests — the tests expect load_config() to control resolution.
-	if config is not None:
+	# DEBUG: print the incoming chromaDB_path and sentinel identities so callers
+	# (like run.py) can be verified to actually pass the expected value.
+	try:
+		print("DEBUG-INCOMING chromaDB_path repr:", repr(chromaDB_path), "id:", id(chromaDB_path))
+		print("DEBUG-INCOMING matches local sentinel:", chromaDB_path is _CHROMA_PATH_OMITTED_LOCAL)
+		print("DEBUG-INCOMING matches db sentinel:", chromaDB_path is vdb_database._CHROMA_PATH_OMITTED)
+	except Exception:
+		pass
+	if cfg is not None:
 		cfg = config
 	else:
 		# load_config() may return {} when tests monkeypatch it; respect that.
@@ -373,7 +391,10 @@ def build_knowledge_base(
 	# - 'explicit' : user passed chromaDB_path argument (could be None to request in-memory)
 	# - 'config'   : resolved from config (this includes defaults like './chromaDB' in config.yaml)
 	# - 'none'     : neither provided nor present in config
-	if chromaDB_path is vdb_database._CHROMA_PATH_OMITTED:
+	# Compare against the local sentinel defined above so that identity checks
+	# are reliable even if vdb_database was imported from different module
+	# instances or under different import paths.
+	if chromaDB_path is _CHROMA_PATH_OMITTED_LOCAL:
 		if "chromaDB_path" in vcfg:
 			resolved_chroma_path = vcfg.get("chromaDB_path")
 			chroma_path_was_explicit = False
@@ -431,6 +452,23 @@ def build_knowledge_base(
 	print(f"create_new: {create_new}   add_documents: {add_documents}   force_persistence: {force_persistence!r}")
 	print(f"vector_db config (vcfg): {vcfg}")
 
+	# NEW: Explicit filesystem debug so user can see whether the resolved path existed
+	if isinstance(resolved_chroma_path, str):
+		try:
+			exists = os.path.exists(resolved_chroma_path)
+			is_dir = os.path.isdir(resolved_chroma_path)
+			print(f"DEBUG-FS: resolved_chroma_path exists: {exists}, is_dir: {is_dir}")
+			if exists and is_dir:
+				try:
+					contents = os.listdir(resolved_chroma_path)
+					print(f"DEBUG-FS: directory preview (up to 10 entries): {contents[:10]}")
+				except Exception as e:
+					print(f"DEBUG-FS: could not list directory contents: {e}")
+		except Exception as e:
+			print(f"DEBUG-FS: filesystem check failed for {resolved_chroma_path!r}: {e}")
+	else:
+		print("DEBUG-FS: resolved_chroma_path is not a string -> no filesystem check performed.")
+
 	# If resolved_chroma_path is None, decide creation intent:
 	# - If caller explicitly passed chromaDB_path=None:
 	#       * if create_new True or add_documents True -> treat as in-memory create
@@ -459,6 +497,27 @@ def build_knowledge_base(
 					"Either provide a chromaDB_path, enable create_new to create a new collection, or pass an explicit "
 					"chromaDB_path=None with create_new=True to create an in-memory collection."
 				)
+
+	# NEW: Prevent accidental creation of a persistent DB when caller intended to LOAD only.
+	# If caller explicitly requested load of an existing persistent collection (create_new=False)
+	# and provided a string path, verify the path looks initialized before calling create_chroma_client.
+	if isinstance(resolved_chroma_path, str) and not create_new:
+		try:
+			# Basic existence check
+			if not os.path.isdir(resolved_chroma_path):
+				log.error("Requested to load persistent DB at %r but path does not exist.", resolved_chroma_path)
+				return None, vdb_database.ChromaDBStatus.MISSING_PERSISTENT
+			# Heuristic: look for common ChromaDB persist artifacts (sqlite file or folder contents)
+			# Adjust filenames as appropriate for your ChromaDB backend.
+			entries = os.listdir(resolved_chroma_path)
+			# if no obvious DB artifact exists, treat as missing
+			if not any(name.lower().endswith('.sqlite3') or name.lower().startswith('chroma') for name in entries):
+				log.error("Requested to load persistent DB at %r but persist directory does not contain expected artifacts: %r", resolved_chroma_path, entries)
+				return None, vdb_database.ChromaDBStatus.MISSING_PERSISTENT
+		except Exception as e:
+			# On unexpected FS errors, avoid calling DB factory and return error status
+			log.exception("Filesystem check failed for resolved_chroma_path=%r: %s", resolved_chroma_path, e)
+			return None, vdb_database.ChromaDBStatus.ERROR
 
 	# Call the DB factory. Older versions returned (collection, status).
 	# Newer versions return (client, collection, status). Accept both shapes.

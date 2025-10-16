@@ -26,13 +26,16 @@ print("--------------------- AFTER CONFIG UPDATE ---------------------\n", CONFI
 # kb, chromaDB_status = kb_loader.build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB', create_new=False, add_documents=True)
 
 # 2. Load the existing persistent ChromaDB collection without adding new documents
-#kb, chromaDB_status = kb_loader.build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB', create_new=False, add_documents=False)
-kb, chromaDB_status = kb_loader.build_knowledge_base( create_new=False, add_documents=False)
+# kb, chromaDB_status = kb_loader.build_knowledge_base( chromaDB_path=r'.\mychromaDB')
+# kb, chromaDB_status = kb_loader.build_knowledge_base( chromaDB_path=r'.\chromaDB', create_new=False, add_documents=False)
+# kb, chromaDB_status = kb_loader.build_knowledge_base( create_new=False, add_documents=False)
+
+
 # 3. Create a new in-memory ChromaDB collection and add new documents to it
 # kb, chromaDB_status = kb_loader.build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=None, create_new=True, add_documents=True)
 
 # 4. Create a new persistent ChromaDB collection and add new documents to it
-#kb, chromaDB_status = kb_loader.build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB', create_new=True, add_documents=True)
+kb, chromaDB_status = kb_loader.build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB', create_new=True, add_documents=True)
 
 
 print("--------------------- CHROMADB STATUS ---------------------\n", chromaDB_status.value)
