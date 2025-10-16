@@ -13,7 +13,12 @@ class ChromaDBStatus(Enum):
     EXISTING_PERSISTENT = "EXISTING_PERSISTENT"
     NEW_PERSISTENT = "NEW_PERSISTENT"
     MISSING_PERSISTENT = "MISSING_PERSISTENT"
+    FAILED_MEMORY = "FAILED_MEMORY"
     ERROR = "ERROR"
+
+# Backwards-compatible aliases used by older tests/examples
+ChromaDBStatus.EXISTING_PERMANENT = ChromaDBStatus.EXISTING_PERSISTENT
+ChromaDBStatus.NEW_PERMANENT = ChromaDBStatus.NEW_PERSISTENT
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +45,7 @@ def create_chroma_client(
     chromaDB_path: Optional[str] = None,
     create_new: bool = False,
     config: Optional[dict] = None,
-) -> Tuple[Optional[object], ChromaDBStatus]:
+) -> Tuple[Optional[object], Optional[object], ChromaDBStatus]:
     """
     Create or load a Chroma client/collection.
 
@@ -57,25 +62,23 @@ def create_chroma_client(
             from chromadb.config import Settings  # type: ignore
         except ImportError as e:
             log.error("Failed to import 'chromadb'. Install it with: pip install chromadb. Error: %s", e)
-            return None, ChromaDBStatus.ERROR
+            return None, None, ChromaDBStatus.ERROR
 
         # Debug incoming params
         print(f"[DEBUG] create_chroma_client called with chromaDB_path={chromaDB_path!r} (type={type(chromaDB_path)}), create_new={create_new}")
 
-        # If caller explicitly passed None as chromaDB_path and requested create_new, allow in-memory
+        # If caller passed None as chromaDB_path treat this as a request for an in-memory collection.
+        # Permit creation of an in-memory collection regardless of the create_new flag so callers
+        # that explicitly pass chromaDB_path=None (or helpers/tests) get the expected behavior.
         if chromaDB_path is None:
-            if not create_new:
-                log.error("chromaDB_path is None and create_new is False -> cannot proceed (explicit None means in-memory request).")
-                return None, ChromaDBStatus.ERROR
-            # create an in-memory client/collection
             try:
                 client = chromadb.Client()  # in-memory
                 collection = client.create_collection(name=collection_name)
                 log.info("Created in-memory Chroma collection '%s'.", collection_name)
-                return collection, ChromaDBStatus.NEW_MEMORY
+                return client, collection, ChromaDBStatus.NEW_MEMORY
             except Exception as e:
                 log.error("Failed to create in-memory Chroma collection: %s", e)
-                return None, ChromaDBStatus.ERROR
+                return None, None, ChromaDBStatus.ERROR
 
         # Normalize legacy folder name 'chroma_db' -> 'chromaDB' before using it on disk
         if isinstance(chromaDB_path, str):
@@ -104,8 +107,8 @@ def create_chroma_client(
             # Prefer the explicit PersistentClient API if present
             if hasattr(chromadb, "PersistentClient"):
                 try:
-                    client = chromadb.PersistentClient(path=chromaDB_path)
-                    log.info("Initialized chromadb.PersistentClient with path=%s", chromaDB_path)
+                        client = chromadb.PersistentClient(path=chromaDB_path)
+                        log.info("Initialized chromadb.PersistentClient with path=%s", chromaDB_path)
                 except Exception as pe:
                     log.warning("chromadb.PersistentClient(path=...) failed: %s. Falling back to Settings-based client.", pe)
                     client = None
@@ -120,6 +123,7 @@ def create_chroma_client(
 
         # At this point, we have a client (or we returned with ERROR)
         # Load existing or create depending on create_new flag
+        # Load existing or create depending on create_new flag
         if not create_new:
             try:
                 collection = client.get_collection(name=collection_name)
@@ -130,7 +134,7 @@ def create_chroma_client(
                     setattr(client, "_persist_path", chromaDB_path)
                 except Exception:
                     pass
-                return collection, ChromaDBStatus.EXISTING_PERSISTENT
+                return client, collection, ChromaDBStatus.EXISTING_PERSISTENT
             except Exception as e:
                 # DO NOT automatically create a new persistent collection here.
                 # Instead provide robust diagnostics to the caller so they can
@@ -157,7 +161,7 @@ def create_chroma_client(
                     collection_name, chromaDB_path, available_collections, persist_files, e
                 )
                 # Return a focused MISSING_PERSISTENT status so callers can act accordingly
-                return None, ChromaDBStatus.MISSING_PERSISTENT
+                return None, None, ChromaDBStatus.MISSING_PERSISTENT
 
         # create_new True: avoid destructive overwrite; namespace if a same-name collection exists
         final_name = collection_name
@@ -176,14 +180,14 @@ def create_chroma_client(
                 setattr(client, "_persist_path", chromaDB_path)
             except Exception:
                 pass
-            return collection, ChromaDBStatus.NEW_PERSISTENT
+            return client, collection, ChromaDBStatus.NEW_PERSISTENT
         except Exception as e:
             log.error("Failed to create new persistent collection '%s' at '%s': %s", final_name, chromaDB_path, e)
-            return None, ChromaDBStatus.ERROR
+            return None, None, ChromaDBStatus.ERROR
 
     except Exception as e:
         log.exception("Unexpected error in create_chroma_client: %s", e)
-        return None, ChromaDBStatus.ERROR
+    return None, None, ChromaDBStatus.ERROR
 
 
 def summarize_collection(chroma_collection):

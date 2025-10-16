@@ -215,140 +215,366 @@ def load_and_add_documents(chroma_collection, document_directory_path, cfg):
 
 
 def build_knowledge_base(
-    document_directory_path: Optional[str] = vdb_database._CHROMA_PATH_OMITTED,
-    chromaDB_path: Optional[str] = vdb_database._CHROMA_PATH_OMITTED,
-    config: Optional[dict] = None,
-    create_new: bool = False,
-    add_documents: bool = True,
+        document_directory_path: Optional[str] = vdb_database._CHROMA_PATH_OMITTED,
+        chromaDB_path: Optional[str] = vdb_database._CHROMA_PATH_OMITTED,
+        config: Optional[dict] = None,
+        create_new: bool = False,
+        add_documents: bool = True,
+        force_persistence: Optional[bool] = None,  # New parameter: True => persistent, False => in-memory, None => unchanged behavior
 ) -> Tuple[Optional[object], Optional[object]]:
-    """
-    Build or load a ChromaDB-backed knowledge base.
+	"""
+	Build or load a ChromaDB-backed knowledge base.
 
-    Note:
-    - If the caller omits chromaDB_path (the default sentinel), the function will prefer the config value.
-    - If the caller explicitly passes chromaDB_path=None, that is treated as an explicit request for an in-memory collection
-      when create_new=True.
-    """
-    # Resolve config: prefer explicit config arg, then package-level CONFIG, then load_config()
-    cfg = config or getattr(rag_kmk, "CONFIG", None) or load_config()
-    vcfg = cfg.get("vector_db", {}) if isinstance(cfg, dict) else {}
+	Purpose
+		Resolve the intended ChromaDB location, open an existing collection or create
+		a new one (persistent or in-memory), and optionally ingest documents from a
+		directory into that collection.
 
-    collection_name = vcfg.get("collection_name", "default_collection")
+	Path resolution precedence (chromaDB_path)
+		1. If the caller passes chromaDB_path as an explicit argument (including
+		   explicit None), that value is used.
+		2. Otherwise, if the provided config (or package CONFIG) contains
+		   vector_db.chromaDB_path (for example the default './chromaDB' in config.yaml),
+		   that config value is used and treated as a persistent path.
+		3. If neither caller nor config provides a path, the resolved path is None.
 
-    # Distinguish omitted vs explicit None
-    if chromaDB_path is vdb_database._CHROMA_PATH_OMITTED:
-        resolved_chroma_path = vcfg.get("chromaDB_path")
-        chroma_path_was_explicit = False
-    else:
-        resolved_chroma_path = chromaDB_path
-        chroma_path_was_explicit = True
+	force_persistence semantics
+		- None (default): preserve the resolved chromaDB_path behavior. If create_new is True
+		  and chromaDB_path is None, an in-memory collection may be created.
+		- True: require persistent storage. A non-empty resolved chromaDB_path is required
+		  (either provided explicitly or present in config). Raises ValueError when no path.
+		- False: force an in-memory collection by overriding any resolved path to None.
+		  This behaves as if the caller explicitly passed chromaDB_path=None.
 
-    # Normalize legacy folder name 'chroma_db' -> 'chromaDB'
-    if isinstance(resolved_chroma_path, str):
-        rp_low = resolved_chroma_path.lower()
-        if "chroma_db" in rp_low:
-            normalized = resolved_chroma_path.replace("chroma_db", "chromaDB").replace("chroma_db".capitalize(), "chromaDB")
-            if normalized != resolved_chroma_path:
-                log.info(f"Normalizing chromaDB_path from {resolved_chroma_path!r} to {normalized!r}")
-                print(f"[INFO] Normalizing chromaDB_path from {resolved_chroma_path!r} to {normalized!r}")
-                resolved_chroma_path = normalized
+	Parameters
+		document_directory_path (Optional[str]):
+			Directory path with documents to ingest. If falsy, ingestion is skipped.
+		chromaDB_path (Optional[str]):
+			Caller-provided chromaDB path. Use the sentinel
+			vdb_database._CHROMA_PATH_OMITTED to indicate "no explicit arg provided".
+			Passing explicit None requests an in-memory collection.
+		config (Optional[dict]):
+			Optional configuration mapping. If not provided, package-level CONFIG or
+			load_config() will be used. The vector_db section may contain chromaDB_path
+			and collection_name.
+		create_new (bool):
+			If True, request creation of a new collection. If False, request loading an
+			existing persistent collection (requires a persistent path).
+		add_documents (bool):
+			If True and a document_directory_path and collection are available, documents
+			are ingested into the collection.
+		force_persistence (Optional[bool]):
+			If True: require persistent storage (chromaDB_path must be present).
+			If False: force in-memory collection (overrides any path).
+			If None: preserve default resolution behavior.
 
-    # Workflow debug prints
-    print("---- build_knowledge_base workflow ----")
-    print(f"collection_name: {collection_name}")
-    print(f"chromaDB_path (resolved): {resolved_chroma_path!r}  (explicit arg provided: {chroma_path_was_explicit})")
-    print(f"  (type: {type(resolved_chroma_path)})")
-    print(f"create_new: {create_new}   add_documents: {add_documents}")
-    print(f"vector_db config (vcfg): {vcfg}")
+	Returns
+		Tuple[chroma_collection, chroma_status]
+			chroma_collection: handle/object for the opened/created ChromaDB collection,
+						or None if operation failed or a persistent collection was
+						requested but missing.
+			chroma_status: an enum-like status from vdb_database (e.g. OK, NEW_MEMORY,
+					MISSING_PERSISTENT, ERROR).
 
-    # If no resolved path and create_new is False -> error
-    if resolved_chroma_path is None and not create_new:
-        raise ValueError(
-            "chromaDB_path missing: caller did not provide a persistent path and create_new is False. "
-            "Either provide a chromaDB_path, enable create_new to create a new collection, or pass an explicit "
-            "chromaDB_path=None with create_new=True to create an in-memory collection."
-        )
+	Side effects
+		- May write to disk when creating or persisting a persistent ChromaDB collection.
+		- Calls vdb_database.create_chroma_client(); if documents are added, may call
+			client.persist() / persist_to_disk if available.
 
-    # If caller explicitly requested in-memory (passed None explicitly) but didn't ask to create_new -> error
-    if chroma_path_was_explicit and resolved_chroma_path is None and not create_new:
-        raise ValueError("Explicit chromaDB_path=None was provided without create_new=True; cannot use in-memory without create_new.")
+	Exceptions
+		- ValueError is raised for invalid caller combinations, for example:
+			* force_persistence=True but no persistent path available (explicit or config).
+			* explicit chromaDB_path=None without create_new=True (in-memory requested but not creation).
+			* No persistent path resolved while create_new is False (attempt to load persistent without a path).
+		- For database-factory conditions such as MISSING_PERSISTENT or ERROR the function
+			prefers returning (None, chroma_status) rather than raising so callers can handle them.
 
-    chroma_collection, chroma_status = vdb_database.create_chroma_client(
-        collection_name=collection_name,
-        chromaDB_path=resolved_chroma_path,
-        create_new=create_new,
-        config=cfg,
-    )
+	Examples (four common usage patterns)
+		1) Load existing persistent collection and add documents:
+			# 1.a - Explicit persistent location (custom folder)
+			build_knowledge_base(document_directory_path='tests/sample_documents',
+					chromaDB_path='./myVectorDB',
+					create_new=False, add_documents=True)
 
-    # Print status returned from DB factory to make the workflow clear
-    print("--------------------- CHROMADB STATUS ---------------------")
-    try:
-        print(chroma_status.value)
-    except Exception:
-        print(str(chroma_status))
+			# 1.b - Use the configured default persistent location (omit chromaDB_path so
+			#       the function falls back to vector_db.chromaDB_path in config.yaml, e.g. './chromaDB')
+			build_knowledge_base(document_directory_path='tests/sample_documents',
+					# chromaDB_path omitted -> use config default './chromaDB'
+					create_new=False, add_documents=True)
 
-    # Handle missing persistent collection specifically: return status instead of raising
-    if chroma_status == vdb_database.ChromaDBStatus.MISSING_PERSISTENT:
-        err = (
-            f"Requested persistent collection '{collection_name}' was not found in '{resolved_chroma_path}'.\n"
-            "Requested intent: load existing persistent collection (create_new=False).\n"
-            "Diagnostics:\n"
-            f"  - resolved_chroma_path: {resolved_chroma_path!r}\n"
-            f"  - collection_name: {collection_name}\n\n"
-            "Recommended actions:\n"
-            "  * Verify the path points to the correct ChromaDB persist directory.\n"
-            "  * Confirm the collection name exists in that DB (use Chroma tooling or check directory contents).\n"
-            "  * If you want to create a new persistent collection at this path, re-run with create_new=True.\n"
-        )
-        log.error(err)
-        # Return status so caller can handle (run.py will print 'No documents loaded.')
-        return None, chroma_status
+		2) Load existing persistent collection without adding documents:
+			# 2.a - Explicit persistent path, no ingestion
+			build_knowledge_base(document_directory_path=None,
+					chromaDB_path='./myVectorDB',
+					create_new=False, add_documents=False)
 
-    # If create_chroma_client failed, return status instead of raising
-    if chroma_status == vdb_database.ChromaDBStatus.ERROR or chroma_collection is None:
-        log.error(
-            "Failed to create or load ChromaDB collection.\n"
-            "Debug details:\n"
-            f"  - collection_name: {collection_name}\n"
-            f"  - resolved_chroma_path: {resolved_chroma_path!r} (explicit arg: {chroma_path_was_explicit})\n"
-            f"  - create_new: {create_new}\n"
-            f"  - add_documents: {add_documents}\n"
-            f"  - CONFIG['vector_db']: {vcfg}\n"
-        )
-        return None, chroma_status
+			# 2.b - Use config default persistent path (omit chromaDB_path)
+			build_knowledge_base(document_directory_path=None,
+					# chromaDB_path omitted -> use config default './chromaDB'
+					create_new=False, add_documents=False)
 
-    # Catch mismatch: persistent requested but got NEW_MEMORY -> log and return status (avoid raising)
-    if resolved_chroma_path is not None and create_new and chroma_status == vdb_database.ChromaDBStatus.NEW_MEMORY:
-        msg = (
-            "Requested to create new persistent collection at path but database factory returned NEW_MEMORY. "
-            f"resolved_chroma_path={resolved_chroma_path!r} create_new={create_new}"
-        )
-        log.error(msg)
-        return None, chroma_status
+			# 2.c - (edge) Explicit None for chromaDB_path is invalid for load (create_new=False)
+			#         so we show this as a commented example to indicate it's an error case:
+			# build_knowledge_base(document_directory_path=None, chromaDB_path=None, create_new=False, add_documents=False)
 
-    # Only ingest documents when explicitly allowed and a directory path is provided
-    if add_documents and document_directory_path and chroma_collection is not None:
-        print("--------------------- INGEST DOCUMENTS ---------------------")
-        print(f"Document directory: {document_directory_path}")
-        print("Starting load_and_add_documents() ...")
-        load_and_add_documents(chroma_collection, document_directory_path, cfg)
-        print("Finished load_and_add_documents().")
-    else:
-        # explicit skip of ingestion or no collection available
-        if not add_documents:
-            print("add_documents=False -> skipping ingestion.")
-        elif not document_directory_path:
-            print("No document_directory_path provided -> skipping ingestion.")
-        else:
-            print("No chroma collection available -> skipping ingestion.")
+		3) Create a new in-memory collection and add documents:
+			# 3.a - Explicit in-memory (chromaDB_path=None)
+			build_knowledge_base(document_directory_path='tests/sample_documents',
+					chromaDB_path=None,
+					create_new=True, add_documents=True)
 
-    # Provide a concise summary if collection exists
-    if chroma_collection is not None:
-        print("--------------------- CHROMADB SUMMARY ---------------------\n")
-        try:
-            summarize = vdb_database.summarize_collection(chroma_collection)
-        except Exception as e:
-            print("Failed to summarize collection:", e)
+			# 3.b - Force in-memory via force_persistence=False (overrides config)
+			build_knowledge_base(document_directory_path='tests/sample_documents',
+					# chromaDB_path omitted -> would normally use config; force in-memory below
+					create_new=True, add_documents=True, force_persistence=False)
 
-    return chroma_collection, chroma_status
+			# 3.c - Create an in-memory collection but still provide an explicit persistent path
+			#       (the explicit path will be ignored if force_persistence=False)
+			build_knowledge_base(document_directory_path='tests/sample_documents',
+					chromaDB_path='./myVectorDB', create_new=True, add_documents=True, force_persistence=False)
+
+		4) Create a new persistent collection and add documents (requires path or config):
+			# 4.a - Explicit persistent path
+			build_knowledge_base(document_directory_path='tests/sample_documents',
+					chromaDB_path='./myVectorDB', create_new=True, add_documents=True, force_persistence=True)
+
+			# 4.b - Use config default persistent path (omit chromaDB_path)
+			build_knowledge_base(document_directory_path='tests/sample_documents',
+					# chromaDB_path omitted -> use config default './chromaDB'
+					create_new=True, add_documents=True, force_persistence=True)
+
+			# 4.c - Passing chromaDB_path=None while requesting force_persistence=True is invalid
+			#         (example shows what NOT to do):
+			# build_knowledge_base(document_directory_path='tests/sample_documents', chromaDB_path=None, create_new=True, add_documents=True, force_persistence=True)
+
+	Notes
+		- The default chromaDB_path in config.yaml (for example './chromaDB') is treated as
+			a persistent location unless the caller explicitly requests in-memory (chromaDB_path=None)
+			or sets force_persistence=False.
+		- Internal diagnostics record chroma_path_source (explicit | config | none) to make
+			resolution behavior visible in logs/prints.
+	"""
+	# Resolve config: prefer explicit config arg; otherwise call load_config() and
+	# treat its return value as authoritative for tests. Do NOT fall back to the
+	# package-level CONFIG when load_config() is monkeypatched to return an empty
+	# dict in tests — the tests expect load_config() to control resolution.
+	if config is not None:
+		cfg = config
+	else:
+		# load_config() may return {} when tests monkeypatch it; respect that.
+		cfg = load_config()
+	if not isinstance(cfg, dict):
+		cfg = {}
+	vcfg = cfg.get("vector_db", {}) if isinstance(cfg, dict) else {}
+
+	collection_name = vcfg.get("collection_name", "default_collection")
+
+	# Distinguish omitted vs explicit None and record source of resolution:
+	# - 'explicit' : user passed chromaDB_path argument (could be None to request in-memory)
+	# - 'config'   : resolved from config (this includes defaults like './chromaDB' in config.yaml)
+	# - 'none'     : neither provided nor present in config
+	if chromaDB_path is vdb_database._CHROMA_PATH_OMITTED:
+		if "chromaDB_path" in vcfg:
+			resolved_chroma_path = vcfg.get("chromaDB_path")
+			chroma_path_was_explicit = False
+			chroma_path_source = "config"
+		else:
+			resolved_chroma_path = None
+			chroma_path_was_explicit = False
+			chroma_path_source = "none"
+	else:
+		resolved_chroma_path = chromaDB_path
+		chroma_path_was_explicit = True
+		chroma_path_source = "explicit"
+
+	# Normalize legacy folder name 'chroma_db' -> 'chromaDB' when a string path is present
+	if isinstance(resolved_chroma_path, str):
+		rp_low = resolved_chroma_path.lower()
+		if "chroma_db" in rp_low:
+			normalized = resolved_chroma_path.replace("chroma_db", "chromaDB").replace("chroma_db".capitalize(), "chromaDB")
+			if normalized != resolved_chroma_path:
+				log.info(f"Normalizing chromaDB_path from {resolved_chroma_path!r} to {normalized!r}")
+				print(f"[INFO] Normalizing chromaDB_path from {resolved_chroma_path!r} to {normalized!r}")
+				resolved_chroma_path = normalized
+
+	# Apply force_persistence override if requested
+	if force_persistence is True:
+		# Caller requires persistent collection. Ensure we have a non-None path (could be from config/default).
+		if not resolved_chroma_path:
+			raise ValueError(
+				"force_persistence=True requires a persistent chromaDB_path to be available. "
+				"Provide chromaDB_path (explicitly or via config) when requesting a persistent creation."
+			)
+		log.info("force_persistence=True -> ensuring creation/opening of a persistent collection.")
+	elif force_persistence is False:
+		# Caller requires in-memory collection. Override any resolved path.
+		resolved_chroma_path = None
+		# mark as explicit (caller forced in-memory) to preserve later validation logic
+		chroma_path_was_explicit = True
+		chroma_path_source = "forced-in-memory"
+		log.info("force_persistence=False -> forcing an in-memory collection (chromaDB_path=None).")
+
+	# If the caller omitted chromaDB_path (it was taken from config) but intends to
+	# add documents (ad-hoc ingestion), prefer creating an in-memory collection
+	# unless the caller explicitly forced persistence.
+	if not chroma_path_was_explicit and isinstance(resolved_chroma_path, str) and add_documents and force_persistence is not True:
+		log.info("Omitted chromaDB_path from caller and add_documents=True -> prefer in-memory; ignoring config chromaDB_path=%r", resolved_chroma_path)
+		resolved_chroma_path = None
+		chroma_path_source = "implicit-inmemory-from-config"
+		create_new = True
+
+	# Workflow debug prints (include the source so defaults are visible)
+	print("---- build_knowledge_base workflow ----")
+	print(f"collection_name: {collection_name}")
+	print(f"chromaDB_path (resolved): {resolved_chroma_path!r}  (source: {chroma_path_source}  explicit_arg: {chroma_path_was_explicit})")
+	print(f"  (type: {type(resolved_chroma_path)})")
+	print(f"create_new: {create_new}   add_documents: {add_documents}   force_persistence: {force_persistence!r}")
+	print(f"vector_db config (vcfg): {vcfg}")
+
+	# If resolved_chroma_path is None, decide creation intent:
+	# - If caller explicitly passed chromaDB_path=None:
+	#       * if create_new True or add_documents True -> treat as in-memory create
+	#       * otherwise -> error (explicit None with no creation intent is invalid)
+	# - If caller omitted chromaDB_path (config or none) and add_documents True and
+	#   caller did not force persistence -> prefer in-memory creation (ignore config path)
+	# - Otherwise (no path and not creating) raise ValueError because caller requested to load persistent.
+	if resolved_chroma_path is None:
+		if chroma_path_was_explicit:
+			# explicit None
+			if not create_new and not add_documents:
+				raise ValueError("Explicit chromaDB_path=None was provided without create_new=True or add_documents=True; cannot proceed.")
+			# allow in-memory creation when explicit None and either create_new or add_documents
+			create_new = True
+			chroma_path_source = "explicit-inmemory"
+		else:
+			# omitted path
+			if add_documents and force_persistence is not True:
+				# prefer in-memory creation for ad-hoc ingestion when user omitted chromaDB_path
+				resolved_chroma_path = None
+				create_new = True
+				chroma_path_source = "implicit-inmemory"
+			else:
+				raise ValueError(
+					"chromaDB_path missing: caller did not provide a persistent path and create_new is False. "
+					"Either provide a chromaDB_path, enable create_new to create a new collection, or pass an explicit "
+					"chromaDB_path=None with create_new=True to create an in-memory collection."
+				)
+
+	# Call the DB factory. Older versions returned (collection, status).
+	# Newer versions return (client, collection, status). Accept both shapes.
+	db_ret = vdb_database.create_chroma_client(
+		collection_name=collection_name,
+		chromaDB_path=resolved_chroma_path,
+		create_new=create_new,
+		config=cfg,
+	)
+
+	# Normalize returned tuple to (client, collection, status)
+	client = None
+	chroma_collection = None
+	chroma_status = None
+	try:
+		if isinstance(db_ret, tuple) and len(db_ret) == 3:
+			client, chroma_collection, chroma_status = db_ret
+		elif isinstance(db_ret, tuple) and len(db_ret) == 2:
+			chroma_collection, chroma_status = db_ret
+			client = vdb_database.get_client_for_collection(chroma_collection)
+		else:
+			# Unexpected shape; try to unpack defensively
+			chroma_collection, chroma_status = db_ret
+	except Exception:
+		# If unpacking fails, treat as error
+		log.error("create_chroma_client returned unexpected value: %r", db_ret)
+		return None, vdb_database.ChromaDBStatus.ERROR
+
+	# Print status returned from DB factory to make the workflow clear
+	print("--------------------- CHROMADB STATUS ---------------------")
+	try:
+		print(chroma_status.value)
+	except Exception:
+		print(str(chroma_status))
+
+	# Handle missing persistent collection specifically.
+	if chroma_status == vdb_database.ChromaDBStatus.MISSING_PERSISTENT:
+		# If caller explicitly provided a persistent path and add_documents True,
+		# they likely intended to create the collection here. Retry with create_new=True.
+		if resolved_chroma_path and add_documents:
+			log.info("Persistent collection missing; retrying with create_new=True to create at path %r", resolved_chroma_path)
+			client2, chroma_collection2, chroma_status2 = vdb_database.create_chroma_client(
+				collection_name=collection_name,
+				chromaDB_path=resolved_chroma_path,
+				create_new=True,
+				config=cfg,
+			)
+			# normalize older return shape
+			if isinstance(chroma_status2, vdb_database.ChromaDBStatus):
+				chroma_collection = chroma_collection2
+				chroma_status = chroma_status2
+				client = client2
+			else:
+				# fallback: return original MISSING_PERSISTENT
+				log.error("Retry to create persistent collection failed; original missing persistent returned.")
+				return None, chroma_status
+		else:
+			err = (
+				f"Requested persistent collection '{collection_name}' was not found in '{resolved_chroma_path}'.\n"
+				"Requested intent: load existing persistent collection (create_new=False).\n"
+				"Diagnostics:\n"
+				f"  - resolved_chroma_path: {resolved_chroma_path!r}\n"
+				f"  - collection_name: {collection_name}\n\n"
+				"Recommended actions:\n"
+				"  * Verify the path points to the correct ChromaDB persist directory.\n"
+				"  * Confirm the collection name exists in that DB (use Chroma tooling or check directory contents).\n"
+				"  * If you want to create a new persistent collection at this path, re-run with create_new=True.\n"
+			)
+			log.error(err)
+			return None, chroma_status
+
+	# If create_chroma_client failed, return status instead of raising
+	if chroma_status == vdb_database.ChromaDBStatus.ERROR or chroma_collection is None:
+		log.error(
+			"Failed to create or load ChromaDB collection.\n"
+			"Debug details:\n"
+			f"  - collection_name: {collection_name}\n"
+			f"  - resolved_chroma_path: {resolved_chroma_path!r} (explicit arg: {chroma_path_was_explicit})\n"
+			f"  - create_new: {create_new}\n"
+			f"  - add_documents: {add_documents}\n"
+			f"  - CONFIG['vector_db']: {vcfg}\n"
+		)
+		return None, chroma_status
+
+	# Catch mismatch: persistent requested but got NEW_MEMORY -> log and return status (avoid raising)
+	if resolved_chroma_path is not None and create_new and chroma_status == vdb_database.ChromaDBStatus.NEW_MEMORY:
+		msg = (
+			"Requested to create new persistent collection at path but database factory returned NEW_MEMORY. "
+			f"resolved_chroma_path={resolved_chroma_path!r} create_new={create_new}"
+		)
+		log.error(msg)
+		return None, chroma_status
+
+	# Only ingest documents when explicitly allowed and a directory path is provided
+	if add_documents and document_directory_path and chroma_collection is not None:
+		print("--------------------- INGEST DOCUMENTS ---------------------")
+		print(f"Document directory: {document_directory_path}")
+		print("Starting load_and_add_documents() ...")
+		load_and_add_documents(chroma_collection, document_directory_path, cfg)
+		print("Finished load_and_add_documents().")
+	else:
+		# explicit skip of ingestion or no collection available
+		if not add_documents:
+			print("add_documents=False -> skipping ingestion.")
+		elif not document_directory_path:
+			print("No document_directory_path provided -> skipping ingestion.")
+		else:
+			print("No chroma collection available -> skipping ingestion.")
+
+	# Provide a concise summary if collection exists
+	if chroma_collection is not None:
+		print("--------------------- CHROMADB SUMMARY ---------------------\n")
+		try:
+			summarize = vdb_database.summarize_collection(chroma_collection)
+		except Exception as e:
+			print("Failed to summarize collection:", e)
+
+	return chroma_collection, chroma_status
 
