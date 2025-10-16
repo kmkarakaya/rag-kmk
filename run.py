@@ -20,25 +20,29 @@ print("--------------------- ORIGINAL CONFIG ---------------------\n", CONFIG['l
 CONFIG['llm'].update({'model': 'gemini-2.5-flash'})
 print("--------------------- AFTER CONFIG UPDATE ---------------------\n", CONFIG['llm'])
     
-# Sample usage modes using explicit flags:
+# Simplified persistent-only usage examples (two fundamental use cases):
 
-# 1. Load the existing persistent ChromaDB collection and add new documents to it
-# kb, chromaDB_status = kb_loader.build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB', create_new=False, add_documents=True)
+# 1) Create a new persistent ChromaDB collection and ingest documents from a folder.
+#    Provide the desired collection_name explicitly to build_knowledge_base().
+# collection_name = "my_new_collection"
+# kb, chromaDB_status = kb_loader.build_knowledge_base(
+#     collection_name,
+#     document_directory_path=r'.\tests\sample_documents',
+#     create_new=True,
+#     add_documents=True
+# )
 
-# 2. Load the existing persistent ChromaDB collection without adding new documents
-# kb, chromaDB_status = kb_loader.build_knowledge_base( chromaDB_path=r'.\mychromaDB')
-# kb, chromaDB_status = kb_loader.build_knowledge_base( chromaDB_path=r'.\chromaDB', create_new=False, add_documents=False)
-# kb, chromaDB_status = kb_loader.build_knowledge_base( create_new=False, add_documents=False)
+# # 2) Open an existing collection by name (fails if DB or collection missing).
+# #    Uncomment and set collection_name to use.
+collection_name = "my_new_collection"
+kb, chromaDB_status = kb_loader.build_knowledge_base(
+    collection_name,
+    create_new=True,
+    add_documents=False
+)
 
 
-# 3. Create a new in-memory ChromaDB collection and add new documents to it
-# kb, chromaDB_status = kb_loader.build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=None, create_new=True, add_documents=True)
-
-# 4. Create a new persistent ChromaDB collection and add new documents to it
-kb, chromaDB_status = kb_loader.build_knowledge_base(document_directory_path=r'.\tests\sample_documents', chromaDB_path=r'.\chromaDB', create_new=True, add_documents=True)
-
-
-print("--------------------- CHROMADB STATUS ---------------------\n", chromaDB_status.value)
+print("--------------------- CHROMADB STATUS ---------------------\n", getattr(chromaDB_status, "value", str(chromaDB_status)))
 
 # Summarize the collection
 if kb is not None:

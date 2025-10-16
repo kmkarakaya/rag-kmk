@@ -1,4 +1,3 @@
-
 # Copilot Instructions for `rag-kmk`
 
 ## Project Overview
@@ -9,7 +8,7 @@
 	- `run.py`, `run_interface.py`, `run_interface2.py`: Example runners (do not modify for features/bugfixes)
 	- `tests/`: Pytest-based unit tests
 	- `docs/`: Documentation
-	- `chromaDB/`: Local persistent ChromaDB (default, can be in-memory via config)
+	- `chromaDB/`: Local persistent ChromaDB (default; in-memory support has been removed)
 - Configuration is managed via `rag_kmk/config/config.yaml` and loaded through library helpers.
 
 ## Architecture & Data Flow
@@ -25,11 +24,12 @@
 - **Testing**: Run `pytest` on the `tests/` directory. Tests should import and exercise library code, not runner scripts.
 - **Configuration**: Always load config from `rag_kmk/config/config.yaml` using library helpers. Never hardcode config in tests.
 - **External Dependencies**: Mock/stub third-party SDKs (e.g., ChromaDB, LLM SDKs) in unit tests. Use environment variables for API keys.
-- **Persistent vs In-Memory DB**: By default, ChromaDB is persistent (`chromaDB/`). For in-memory, set `vector_db.chromaDB_path: null` in config.
+- **Persistent DB only**: ChromaDB is persistent only. Ensure `vector_db.chromaDB_path` is set to a valid filesystem path in config.
 
 ## Project-Specific Conventions
 
 - **No direct runner changes**: Do not add features or fix bugs in `run.py`; update library code only.
+- **ABSOLUTE RULE:** Never modify `run.py` under any circumstance. This file is a stable example/entry-point and must remain unchanged by contributors, automated tools, or Copilot edits.
 - **Minimal, idiomatic Python**: Prefer small, focused changes compatible with Python 3.8+.
 - **Testing policy**: Each feature should have a happy-path and edge-case test. Avoid monkeypatching internal library code; mock only external dependencies.
 - **Secrets**: Never commit API keys; use environment variables and placeholders.
@@ -43,7 +43,7 @@
 ## Key Files & Directories
 
 - `rag_kmk/`: Library code
-- `rag_kmk/config/config.yaml`: Main config
+- `rag_kmk/config/config.yaml`: Main config (must include vector_db.chromaDB_path)
 - `tests/`: Unit tests
 - `docs/`: Documentation
 - `chromaDB/`: Persistent DB (add to `.gitignore`)

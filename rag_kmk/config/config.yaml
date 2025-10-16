@@ -2,8 +2,10 @@
 # Vector Database Configuration
 vector_db:
   type: chromadb
+  # Path to persistent ChromaDB storage on disk. In-memory usage is removed.
+  # Set to a directory on the filesystem where ChromaDB will persist data.
   chromaDB_path: ./chromaDB
-  collection_name: rag_collection
+  collection_name: default_collection
   embedding_model: sentence-transformers/distiluse-base-multilingual-cased-v1
   tokens_per_chunk: 128
   category: Journal Paper
