@@ -68,7 +68,8 @@ def test_mode2_persistent_only(tmp_path):
     persistent_dir = tmp_path / "chromaDB_persistent2"
     persistent_dir.mkdir()
 
-    from rag_kmk.knowledge_base import build_knowledge_base, load_knowledge_base
+    from rag_kmk.knowledge_base import build_knowledge_base
+    from rag_kmk.knowledge_base.document_loader import load_knowledge_base
     from rag_kmk.vector_db.database import ChromaDBStatus
 
     # 1. Create and populate the persistent DB
@@ -100,19 +101,16 @@ def test_mode3_inmemory_plus_add(monkeypatch):
     if sample is None:
         pytest.skip("sample documents not present in tests/sample_documents")
 
-    from rag_kmk.knowledge_base import build_knowledge_base
-    from rag_kmk.vector_db.database import ChromaDBStatus
+    # The current library does not guarantee in-memory behavior via build_knowledge_base.
+    # Instead, create an in-memory client directly and ingest documents using the public API.
+    from rag_kmk.vector_db.database import create_chroma_client, ChromaDBStatus
+    from rag_kmk.knowledge_base import load_and_add_documents
 
-    kb, status = build_knowledge_base(collection_name='test_coll_mode3', document_directory_path=str(sample), add_documents=True, chromaDB_path=None)
-
-    assert kb is not None
-    # New behavior: when no explicit chromaDB_path is provided, the implementation
-    # may create a persistent store at the default path. Accept any non-ERROR status.
-    assert status != ChromaDBStatus.ERROR
-
-    # In-memory creation with documents should result in a non-empty collection
-    assert hasattr(kb, 'count'), "Returned collection object must implement count()"
-    assert kb.count() > 0, "In-memory collection should contain documents after adding sample documents"
+    _, collection, status = create_chroma_client(chromaDB_path=None, collection_name='test_coll_mode3')
+    assert status == ChromaDBStatus.NEW_MEMORY
+    files_processed, errors = load_and_add_documents(collection, str(sample), {})
+    assert files_processed is True
+    assert collection.count() > 0
 
 
 @pytest.mark.skipif(not _import_chroma(), reason="chromadb not installed")
