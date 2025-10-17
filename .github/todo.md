@@ -30,7 +30,7 @@ This file is a compact, prioritized review of the repository's RAG implementatio
 
 3) Bugs / fragile behavior / risks
   - Initialization side effects: importing packages triggers config loads and LLM client creation -> surprising behavior in tests/CI.
-  - `create_chroma_client` returns `NEW_MEMORY` or `FAILED_MEMORY` depending on failures; some code paths assume non-None client/collection. Tests account for this but production code needs clearer error handling.
+  - `create_chroma_client` may return `MISSING_PERSISTENT` when no persistent path is provided; some code paths assume a non-None client/collection. Tests account for this but production code needs clearer error handling.
   - `check_env_file()` in `llm_interface` uses ``if 'GEMINI_API_KEY' or 'GOOGLE_API_KEY' in line:`` which always evaluates truthy; parsing .env lines is brittle — use python-dotenv or robust parsing.
   - Some broad excepts swallow exceptions without logging details; prefer targeted exceptions and logging the stack for debugging.
 
@@ -261,12 +261,12 @@ Knowledge base build comments and usage:
     # Load the existing chromadb collection without adding new documents
     #knowledge_base, chromaDB_status = build_knowledge_base( chromaDB_path=r'.\chroma_db')
 
-    # Create a new in-memory chromadb collection and add new documents to it
+  # Create a new temporary ChromaDB collection (persistent directory) and add new documents to it
     knowledge_base, chromaDB_status = build_knowledge_base( document_directory_path=r'.\tests\sample_documents')
 ```
 
 - What it does: shows example use cases, but the chosen one is hard-coded to use sample documents folder.
-- Why risky: commented examples are not discoverable via CLI. The script always builds an in-memory collection with sample docs; there's no clear `--index-only` or `--chroma-path` argument.
+ - Why risky: commented examples are not discoverable via CLI. The script previously demonstrated an implicit in-memory collection path; that behavior has been removed and callers should provide an explicit `--chroma-path` or use a temporary directory. There's no clear `--index-only` or `--chroma-path` argument.
 - Exact fix:
   - Wire `build_knowledge_base` to CLI flags. For example, if `--chroma-path` provided, call with `chromaDB_path`; if `--docs` set, pass `document_directory_path`.
   - Add an `--index-only` flag that runs `build_knowledge_base` and exits after summarizing.
