@@ -56,7 +56,7 @@ kb, status = load_knowledge_base('my_collection')
 print(status)
 ```
 
-4) Create an ephemeral collection for tests (use a temporary directory):
+4) Create an ephemeral (directory-backed) collection for tests (use a temporary directory):
 ```python
 from rag_kmk.knowledge_base import build_knowledge_base
 import tempfile
@@ -66,7 +66,7 @@ with tempfile.TemporaryDirectory() as td:
       collection_name='tmp',
       document_directory_path=r'tests\sample_documents',
       add_documents=True,
-      chromaDB_path=td,  # ephemeral filesystem directory for this run
+      chromaDB_path=td,  # use a temporary filesystem directory for this run (ephemeral)
     )
     print(status)
 # data removed when the temp dir is deleted
