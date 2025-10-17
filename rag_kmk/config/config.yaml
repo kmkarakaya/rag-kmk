@@ -2,7 +2,7 @@
 # Vector Database Configuration
 vector_db:
   type: chromadb
-  # Path to persistent ChromaDB storage on disk. In-memory usage is removed.
+  # Path to persistent ChromaDB storage on disk.
   # Set to a directory on the filesystem where ChromaDB will persist data.
   chromaDB_path: ./chromaDB
   collection_name: default_collection

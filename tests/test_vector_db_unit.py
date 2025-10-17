@@ -1,16 +1,14 @@
 from rag_kmk.vector_db.database import create_chroma_client, ChromaDBStatus
 
 
-def test_create_chroma_client_in_memory():
-    # Request an in-memory client by passing chromaDB_path=None
+def test_create_chroma_client_no_inmemory():
+    # Request without a persistent path (None) should not create an in-memory client
     client, collection, status = create_chroma_client(chromaDB_path=None)
-    # The implementation can either create an in-memory collection or fail and return a FAILED_MEMORY status.
-    assert status in (ChromaDBStatus.NEW_MEMORY, ChromaDBStatus.FAILED_MEMORY)
-    if status == ChromaDBStatus.NEW_MEMORY:
-        assert client is not None
-        assert collection is not None
-        # collection should have a count method
-        assert hasattr(collection, 'count')
+    # The factory no longer supports implicit in-memory clients. Expect a missing persistent path or error.
+    assert status in (ChromaDBStatus.MISSING_PERSISTENT, ChromaDBStatus.ERROR)
+    # Ensure that for missing persistent path, client/collection are not returned
+    if status == ChromaDBStatus.MISSING_PERSISTENT:
+        assert client is None and collection is None
     else:
-        # FAILED_MEMORY -> ensure the function returned None for client/collection
+        # On ERROR it's acceptable for client/collection to be None
         assert client is None or collection is None

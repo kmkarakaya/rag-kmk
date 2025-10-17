@@ -92,25 +92,53 @@ def test_mode2_persistent_only(tmp_path):
 
 
 @pytest.mark.skipif(not _import_chroma(), reason="chromadb not installed")
-def test_mode3_inmemory_plus_add(monkeypatch):
+def test_mode3_ephemeral_persistent_plus_add(monkeypatch):
     """
-    Mode 3: create a new in-memory chromadb collection and add new documents to it.
-    Call build_knowledge_base with only document_directory_path and expect an in-memory collection.
+    Mode 3: create a new ephemeral persistent chromadb collection and add new documents to it.
+    Use a temporary directory for the persistent store and verify ingestion.
     """
     sample = _sample_docs_path()
     if sample is None:
         pytest.skip("sample documents not present in tests/sample_documents")
 
-    # The current library does not guarantee in-memory behavior via build_knowledge_base.
-    # Instead, create an in-memory client directly and ingest documents using the public API.
+    # The library no longer supports implicit in-memory mode. Create a
+    # temporary persistent directory and use it for an ephemeral collection.
     from rag_kmk.vector_db.database import create_chroma_client, ChromaDBStatus
     from rag_kmk.knowledge_base import load_and_add_documents
+    import tempfile
 
-    _, collection, status = create_chroma_client(chromaDB_path=None, collection_name='test_coll_mode3')
-    assert status == ChromaDBStatus.NEW_MEMORY
-    files_processed, errors = load_and_add_documents(collection, str(sample), {})
-    assert files_processed is True
-    assert collection.count() > 0
+    td = tempfile.mkdtemp()
+    client = None
+    try:
+        client, collection, status = create_chroma_client(chromaDB_path=td, collection_name='test_coll_mode3')
+        # Expect persistent creation to succeed
+        assert status in (ChromaDBStatus.NEW_PERSISTENT_CREATED, ChromaDBStatus.OK)
+        files_processed, errors = load_and_add_documents(collection, str(sample), {})
+        assert files_processed is True
+        assert collection.count() > 0
+        # Best-effort: persist and close the client to release file handles
+        try:
+            if client is not None and hasattr(client, 'persist'):
+                client.persist()
+        except Exception:
+            pass
+        try:
+            if client is not None and hasattr(client, 'close'):
+                client.close()
+        except Exception:
+            pass
+    finally:
+        # Attempt robust cleanup on Windows: retry rmtree a few times to account for delayed file handle release
+        import shutil, time
+        for attempt in range(6):
+            try:
+                shutil.rmtree(td)
+                break
+            except PermissionError:
+                time.sleep(0.2)
+        else:
+            # Last resort: ignore cleanup failure (temp dir will remain)
+            pass
 
 
 @pytest.mark.skipif(not _import_chroma(), reason="chromadb not installed")
@@ -123,9 +151,11 @@ def test_load_and_add_documents_public_api(tmp_path):
     from rag_kmk.vector_db.database import create_chroma_client
     from rag_kmk import CONFIG
 
-    # 1. Create an empty in-memory collection to pass to the function
-    _, collection, _ = create_chroma_client(
-        chromaDB_path=None,
+    # 1. Create an empty temporary persistent collection to pass to the function
+    persistent_dir = tmp_path / "chromaDB_tmp"
+    persistent_dir.mkdir()
+    client, collection, _ = create_chroma_client(
+        chromaDB_path=str(persistent_dir),
         collection_name=f"test_collection_{tmp_path.name}"
     )
     assert collection is not None

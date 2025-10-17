@@ -12,8 +12,6 @@ class ChromaDBStatus(Enum):
 	# Canonical statuses
 	OK = "OK"
 	NEW_PERSISTENT_CREATED = "NEW_PERSISTENT_CREATED"
-	NEW_MEMORY = "NEW_MEMORY"
-	FAILED_MEMORY = "FAILED_MEMORY"
 	MISSING_PERSISTENT = "MISSING_PERSISTENT"
 	MISSING_COLLECTION = "MISSING_COLLECTION"
 	ALREADY_EXISTS = "ALREADY_EXISTS"   # returned when create_new=True but collection already exists
@@ -36,62 +34,16 @@ def create_chroma_client(collection_name: str = 'default', chromaDB_path: str = 
 	"""
 	Factory for chroma clients.
 
-	- If chromaDB_path is None: attempt to create an in-memory client (NEW_MEMORY/FAILED_MEMORY).
-	- If chromaDB_path is provided and create_new=True: ensure folder exists and create collection.
-	- If chromaDB_path is provided and create_new=False: open existing persistent collection.
+	- If chromaDB_path is provided and create_new=True: ensure folder exists and create/open the collection persistently.
+	- If chromaDB_path is provided and create_new=False: open an existing persistent collection.
+	- If chromaDB_path is None: the function returns a MISSING_PERSISTENT status (persistent path is required).
 	Returns (client, collection, status).
 	"""
-	# If caller requested no path (chromaDB_path is None)
+	# Require a valid persistent chromaDB_path. If None is passed, return
+	# a MISSING_PERSISTENT status to indicate the caller must provide a path.
 	if chromaDB_path is None:
-		# If caller did not request creation of a new DB, treat this as a missing persistent path
-		# to preserve legacy semantics where None was rejected for load operations.
-		if not create_new:
-			log.error("create_chroma_client called with chromaDB_path=None and create_new=False - rejecting as missing persistent path")
-			return None, None, ChromaDBStatus.MISSING_PERSISTENT
-		try:
-			import chromadb
-		except Exception as e:
-			log.error("Persistent chromaDB_path is required; in-memory DB requested but chromadb not available: %s", e)
-			return None, None, ChromaDBStatus.FAILED_MEMORY
-
-	# Try to construct an in-memory client (create_new=True)
-		try:
-			client = None
-			if hasattr(chromadb, 'Client'):
-				try:
-					client = chromadb.Client()
-				except Exception:
-					client = None
-			if client is None and hasattr(chromadb, 'PersistentClient'):
-				try:
-					# Some chromadb versions may accept no-arg PersistentClient -> best-effort
-					client = chromadb.PersistentClient()
-				except Exception:
-					client = None
-			if client is None:
-				return None, None, ChromaDBStatus.FAILED_MEMORY
-
-			# create or open collection depending on create_new
-			if create_new:
-				if hasattr(client, 'get_or_create_collection'):
-					collection = client.get_or_create_collection(name=collection_name)
-				else:
-					try:
-						collection = client.create_collection(name=collection_name)
-					except Exception:
-						collection = client.get_collection(collection_name)
-				_COLLECTION_CLIENTS[collection_name] = client
-				return client, collection, ChromaDBStatus.NEW_MEMORY
-			else:
-				try:
-					collection = client.get_collection(collection_name)
-					_COLLECTION_CLIENTS[collection_name] = client
-					return client, collection, ChromaDBStatus.OK
-				except Exception:
-					return None, None, ChromaDBStatus.MISSING_COLLECTION
-		except Exception:
-			log.exception("Failed to construct in-memory chromadb client")
-			return None, None, ChromaDBStatus.FAILED_MEMORY
+		log.error("create_chroma_client requires a persistent chromaDB_path; None was provided")
+		return None, None, ChromaDBStatus.MISSING_PERSISTENT
 
 	# Validate path
 	if not isinstance(chromaDB_path, str) or not chromaDB_path.strip():
