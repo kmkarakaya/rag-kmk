@@ -9,71 +9,45 @@ log = logging.getLogger(__name__)
 
 # Minimal status enum for callers
 class ChromaDBStatus(Enum):
-	# Canonical statuses
-	OK = "OK"
+	CLIENT_READY = "CLIENT_READY"
+	COLLECTION_CREATED = "COLLECTION_CREATED"
+	COLLECTION_LOADED = "COLLECTION_LOADED"
+	COLLECTION_LISTED = "COLLECTION_LISTED"
+	SUMMARY_READY = "SUMMARY_READY"
 	NEW_PERSISTENT_CREATED = "NEW_PERSISTENT_CREATED"
 	MISSING_PERSISTENT = "MISSING_PERSISTENT"
 	MISSING_COLLECTION = "MISSING_COLLECTION"
 	ALREADY_EXISTS = "ALREADY_EXISTS"   # returned when create_new=True but collection already exists
 	ERROR = "ERROR"
 
-	# Backwards-compatible aliases (older tests / callers expect these names)
-	# EXISTING_* map to OK
-	EXISTING_PERSISTENT = "OK"
-	EXISTING_PERMANENT = "OK"
-	# NEW_PERMANENT maps to new persistent creation
-	NEW_PERMANENT = "NEW_PERSISTENT_CREATED"
-	# Historic name for NEW_PERSISTENT_CREATED
-	NEW_PERSISTENT = "NEW_PERSISTENT_CREATED"
-
 # registry to map collection name -> client for helper lookup
 _COLLECTION_CLIENTS = {}
 
 
-def create_chroma_client(collection_name: str = 'default', chromaDB_path: str = None, create_new: bool = True, config: dict = None):
+def create_chromadb_client(chromaDB_path: str = None):
 	"""
-	Factory for chroma clients.
-
-	- If chromaDB_path is provided and create_new=True: ensure folder exists and create/open the collection persistently.
-	- If chromaDB_path is provided and create_new=False: open an existing persistent collection.
-	- If chromaDB_path is None: the function returns a MISSING_PERSISTENT status (persistent path is required).
-	Returns (client, collection, status).
+	Create or load a persistent ChromaDB client for the given path.
+	If chromaDB_path is not provided, uses CONFIG['vector_db']['chromaDB_path'] or CONFIG['llm']['chromaDB_path'].
+	Returns a dict: {'status': str, 'client': client or None, 'error': str or None}
 	"""
-	# Require a valid persistent chromaDB_path. If None is passed, return
-	# a MISSING_PERSISTENT status to indicate the caller must provide a path.
 	if chromaDB_path is None:
-		log.error("create_chroma_client requires a persistent chromaDB_path; None was provided")
-		return None, None, ChromaDBStatus.MISSING_PERSISTENT
-
-	# Validate path
-	if not isinstance(chromaDB_path, str) or not chromaDB_path.strip():
+		chromaDB_path = (
+			CONFIG.get('vector_db', {}).get('chromaDB_path')
+			or CONFIG.get('llm', {}).get('chromaDB_path')
+		)
+	if chromaDB_path is None or not isinstance(chromaDB_path, str) or not chromaDB_path.strip():
 		log.error("Persistent chromaDB_path is required; invalid value provided.")
-		return None, None, ChromaDBStatus.ERROR
+		return {
+			'status': ChromaDBStatus.MISSING_PERSISTENT.value,
+			'client': None,
+			'error': (
+				"ChromaDB path is missing or invalid. "
+				"Please set 'chromaDB_path' in your config under 'vector_db' or 'llm', "
+				"or provide it explicitly when calling this function."
+			)
+		}
 
 	abs_path = os.path.abspath(chromaDB_path)
-
-	# Ensure directory exists when creating new
-	if create_new:
-		try:
-			os.makedirs(abs_path, exist_ok=True)
-		except Exception as e:
-			log.exception("Failed to create chromaDB directory %r: %s", abs_path, e)
-			return None, None, ChromaDBStatus.ERROR
-	else:
-		# Loading existing persistent DB: require directory exist and be non-empty
-		if not os.path.isdir(abs_path):
-			log.error("Persistent chromaDB path does not exist: %r", abs_path)
-			return None, None, ChromaDBStatus.MISSING_PERSISTENT
-		try:
-			entries = os.listdir(abs_path)
-			if not entries:
-				log.error("Persistent chromaDB path appears empty: %r", abs_path)
-				return None, None, ChromaDBStatus.MISSING_PERSISTENT
-		except Exception:
-			log.exception("Failed to inspect chromaDB directory: %r", abs_path)
-			return None, None, ChromaDBStatus.ERROR
-
-	# Deferred import of chromadb and optional Settings (kept)
 	try:
 		import chromadb
 		try:
@@ -82,187 +56,178 @@ def create_chroma_client(collection_name: str = 'default', chromaDB_path: str = 
 			Settings = None
 	except Exception as e:
 		log.exception("chromadb library is required but not installed: %s", e)
-		return None, None, ChromaDBStatus.ERROR
+		return {
+			'status': ChromaDBStatus.ERROR.value,
+			'client': None,
+			'error': (
+				"ChromaDB library is not installed or failed to import. "
+				"Please ensure 'chromadb' is installed in your environment. "
+				f"Original error: {str(e)}"
+			)
+		}
 
-	# Instantiate client using modern API when available (preferred)
-	client = None
 	try:
 		if hasattr(chromadb, "PersistentClient"):
-			try:
-				client = chromadb.PersistentClient(path=abs_path)
-			except Exception as e:
-				log.exception("chromadb.PersistentClient() raised: %s", e)
-				return None, None, ChromaDBStatus.ERROR
+			client = chromadb.PersistentClient(path=abs_path)
 		else:
-			# fallback to older Client(Settings(...)) if PersistentClient not present
 			if Settings is None:
 				log.error("chromadb.PersistentClient not available and Settings unavailable.")
-				return None, None, ChromaDBStatus.ERROR
+				return {
+					'status': ChromaDBStatus.ERROR.value,
+					'client': None,
+					'error': (
+						"Neither PersistentClient nor Settings are available in chromadb. "
+						"Please check your chromadb installation/version."
+					)
+				}
 			settings = Settings(chroma_db_impl="duckdb+parquet", persist_directory=abs_path)
 			client = chromadb.Client(settings=settings)
 	except Exception as e:
 		log.exception("Failed to construct chromadb client at %r: %s", abs_path, e)
-		return None, None, ChromaDBStatus.ERROR
+		return {
+			'status': ChromaDBStatus.ERROR.value,
+			'client': None,
+			'error': (
+				f"Failed to construct ChromaDB client at '{abs_path}'. "
+				"Check that the path is writable and chromadb is properly installed. "
+				f"Original error: {str(e)}"
+			)
+		}
 
-	# Create or open the collection depending on create_new flag
+	return {'status': ChromaDBStatus.CLIENT_READY.value, 'client': client, 'error': None}
+
+def create_collection(client, collection_name: str):
+	"""
+	Create a new collection in the given client.
+	Returns (result_dict, collection or None)
+	"""
 	try:
-		if create_new:
-			# If caller requested creation, first check whether collection already exists.
-			try:
-				if hasattr(client, "list_collections"):
-					names = client.list_collections()
-					# list_collections may return names or collection objects; normalize
-					existing_names = []
-					if isinstance(names, list):
-						for n in names:
-							if isinstance(n, str):
-								existing_names.append(n)
-							else:
-								# collection object: prefer .name or .id attribute
-								existing_names.append(getattr(n, "name", None) or getattr(n, "id", None))
-					# If the collection exists, do not recreate — return ALREADY_EXISTS
-					if collection_name in existing_names:
-						log.info("Requested create_new=True but collection %r already exists in %r", collection_name, abs_path)
-						return None, None, ChromaDBStatus.ALREADY_EXISTS
-			except Exception:
-				# If list_collections fails, fall back to attempting to get_collection to detect existence
-				try:
-					if hasattr(client, "get_collection"):
-						_ = client.get_collection(collection_name)
-						# if get_collection succeeded then collection exists
-						log.info("Requested create_new=True but collection %r already exists (detected via get_collection).", collection_name)
-						return None, None, ChromaDBStatus.ALREADY_EXISTS
-				except Exception:
-					# get_collection failed so collection probably does not exist; proceed to create
-					pass
-
-			# collection does not exist; create or get it now
-			if hasattr(client, "get_or_create_collection"):
-				collection = client.get_or_create_collection(name=collection_name)
-			else:
-				try:
-					collection = client.create_collection(name=collection_name)
-				except Exception:
-					collection = client.get_collection(collection_name)
-			_COLLECTION_CLIENTS[collection_name] = client
-			status = ChromaDBStatus.NEW_PERSISTENT_CREATED
-			return client, collection, status
+		names = list_collection_names(client)['collections']
+		if collection_name in names:
+			result = {
+				'status': ChromaDBStatus.ALREADY_EXISTS.value,
+				'error': (
+					f"Collection '{collection_name}' already exists. "
+					"Collection names must be unique. "
+					"Please try a different name that does not conflict with existing collections."
+				)
+			}
+			return result, None
+		if hasattr(client, "get_or_create_collection"):
+			collection = client.get_or_create_collection(name=collection_name)
 		else:
-			# open-only: do NOT create the collection; require it to exist
-			try:
-				if hasattr(client, "get_collection"):
-					collection = client.get_collection(collection_name)
-				else:
-					if hasattr(client, "list_collections"):
-						names = client.list_collections()
-						if isinstance(names, list) and collection_name in names:
-							collection = client.get_collection(collection_name)
-						else:
-							return None, None, ChromaDBStatus.MISSING_COLLECTION
-					else:
-						collection = client.get_collection(collection_name)
-				_COLLECTION_CLIENTS[collection_name] = client
-				return client, collection, ChromaDBStatus.OK
-			except Exception as e:
-				log.debug("Failed to open existing collection %r: %s", collection_name, e)
-				return None, None, ChromaDBStatus.MISSING_COLLECTION
+			collection = client.create_collection(name=collection_name)
+		_COLLECTION_CLIENTS[collection_name] = client
+		result = {'status': ChromaDBStatus.COLLECTION_CREATED.value, 'error': None}
+		return result, collection
 	except Exception as e:
-		log.exception("Failed while creating/opening collection %r in %r: %s", collection_name, abs_path, e)
-		return None, None, ChromaDBStatus.ERROR
+		log.exception("Failed to create collection %r: %s", collection_name, e)
+		result = {
+			'status': ChromaDBStatus.ERROR.value,
+			'error': (
+				f"Failed to create collection '{collection_name}'. "
+				"Check that the client is valid and the name is allowed. "
+				f"Original error: {str(e)}"
+			)
+		}
+		return result, None
 
-
-def get_client_for_collection(collection):
-	"""Return client for a given collection object or None."""
-	# Try to find by common attributes first
+def load_collection(client, collection_name: str):
+	"""
+	Load an existing collection from the given client.
+	Returns (result_dict, collection or None)
+	"""
 	try:
-		# chromadb collection may have .client or ._client
-		if hasattr(collection, "client"):
-			return getattr(collection, "client")
-		if hasattr(collection, "_client"):
-			return getattr(collection, "_client")
-		# fallback to registry by name
-		name = getattr(collection, "name", None) or getattr(collection, "id", None)
-		if name and name in _COLLECTION_CLIENTS:
-			return _COLLECTION_CLIENTS[name]
-	except Exception:
-		pass
-	return None
+		names = list_collection_names(client)['collections']
+		if collection_name not in names:
+			result = {
+				'status': ChromaDBStatus.MISSING_COLLECTION.value,
+				'error': (
+					f"Collection '{collection_name}' does not exist in the database. "
+					"Please check the name or create the collection first."
+				)
+			}
+			return result, None
+		collection = client.get_collection(collection_name)
+		_COLLECTION_CLIENTS[collection_name] = client
+		result = {'status': ChromaDBStatus.COLLECTION_LOADED.value, 'error': None}
+		return result, collection
+	except Exception as e:
+		log.debug("Failed to load collection %r: %s", collection_name, e)
+		result = {
+			'status': ChromaDBStatus.ERROR.value,
+			'error': (
+				f"Failed to load collection '{collection_name}'. "
+				"Check that the client is valid and the collection exists. "
+				f"Original error: {str(e)}"
+			)
+		}
+		return result, None
 
 def summarize_collection(chroma_collection):
-    if chroma_collection is None:
-        print("No chroma collection available to summarize.")
-        return json.dumps({})
-    summary = {}  # Initialize summary as a dictionary
-    try:
-        summary["collection_name"] = getattr(chroma_collection, 'name', 'unknown')
-    except Exception:
-        summary["collection_name"] = 'unknown'
+	"""
+	Return a summary dict for the collection: {'status': str, 'summary': dict, 'error': str or None}
+	"""
+	if chroma_collection is None:
+		return {'status': 'NO_COLLECTION', 'summary': {}, 'error': "No chroma collection available to summarize."}
+	summary = {}
+	try:
+		summary["collection_name"] = getattr(chroma_collection, 'name', 'unknown')
+	except Exception:
+		summary["collection_name"] = 'unknown'
 
-    # Prefer collection.count() if available
-    try:
-        total = chroma_collection.count()
-    except Exception:
-        total = 0
-    summary["document_count"] = total
-    summary["documents"] = []
+	try:
+		total = chroma_collection.count()
+	except Exception:
+		total = 0
+	summary["document_count"] = total
+	summary["documents"] = []
 
-    # Try to retrieve all entries via the collection.get() API which is more
-    # robust than assuming numeric ids. Different Chroma versions store ids
-    # differently, so guard against missing keys.
-    try:
-        data = chroma_collection.get()
-        metadatas = data.get('metadatas') if isinstance(data, dict) else None
-        if metadatas:
-            distinct_documents = set()
-            for md in metadatas:
-                if isinstance(md, dict):
-                    distinct_documents.add(md.get('document', 'Unknown'))
-            summary['documents'] = list(distinct_documents)
-            # Update document_count if it was 0 but we found entries
-            if summary['document_count'] == 0:
-                summary['document_count'] = len(metadatas)
-    except Exception:
-        # Fall back to best-effort: leave documents empty
-        pass
+	try:
+		data = chroma_collection.get()
+		metadatas = data.get('metadatas') if isinstance(data, dict) else None
+		if metadatas:
+			distinct_documents = set()
+			for md in metadatas:
+				if isinstance(md, dict):
+					distinct_documents.add(md.get('document', 'Unknown'))
+			summary['documents'] = list(distinct_documents)
+			if summary['document_count'] == 0:
+				summary['document_count'] = len(metadatas)
+	except Exception:
+		pass
 
-    # Best-effort fallback: if collection reports zero but collection was loaded
-    # from a persistent sqlite, attempt to read the sqlite directly to surface
-    # stored segments/metadata (useful when Chroma's SDK presents a different
-    # logical API for persisted stores).
-    if summary['document_count'] == 0:
-        try:
-            persist = getattr(chroma_collection, '_persist_path', None)
-            if persist:
-                import sqlite3
-                dbfile = os.path.join(persist, 'chroma.sqlite3')
-                if os.path.exists(dbfile):
-                    conn = sqlite3.connect(dbfile)
-                    cur = conn.cursor()
-                    # count segments and try to read segment_metadata.document
-                    try:
-                        cur.execute('SELECT count(*) FROM segments')
-                        seg_count = cur.fetchone()[0]
-                        summary['document_count'] = seg_count
-                    except Exception:
-                        seg_count = 0
-                    docs = set()
-                    try:
-                        cur.execute('SELECT * FROM segment_metadata')
-                        for row in cur.fetchall():
-                            # heuristic: look for a column that looks like a filename
-                            for cell in row:
-                                if isinstance(cell, str) and cell.endswith('.txt'):
-                                    docs.add(cell)
-                    except Exception:
-                        pass
-                    if docs:
-                        summary['documents'] = list(docs)
-                    conn.close()
-        except Exception:
-            pass
+	if summary['document_count'] == 0:
+		try:
+			persist = getattr(chroma_collection, '_persist_path', None)
+			if persist:
+				import sqlite3
+				dbfile = os.path.join(persist, 'chroma.sqlite3')
+				if os.path.exists(dbfile):
+					conn = sqlite3.connect(dbfile)
+					cur = conn.cursor()
+					try:
+						cur.execute('SELECT count(*) FROM segments')
+						seg_count = cur.fetchone()[0]
+						summary['document_count'] = seg_count
+					except Exception:
+						seg_count = 0
+					docs = set()
+					try:
+						cur.execute('SELECT * FROM segment_metadata')
+						for row in cur.fetchall():
+							for cell in row:
+								if isinstance(cell, str) and cell.endswith('.txt'):
+									docs.add(cell)
+					except Exception:
+						pass
+					if docs:
+						summary['documents'] = list(docs)
+					conn.close()
+		except Exception:
+			pass
 
-    print(json.dumps(summary, indent=2))
-    return json.dumps(summary, indent=2)
+	return {'status': ChromaDBStatus.SUMMARY_READY.value, 'summary': summary, 'error': None}
 
 def _normalize_list_collections_result(raw) -> typing.List[str]:
 	"""Normalize various shapes returned by client.list_collections() into a list of collection names."""
@@ -293,16 +258,19 @@ def _normalize_list_collections_result(raw) -> typing.List[str]:
 		pass
 	return names
 
-def list_collection_names(client) -> typing.List[str]:
-	"""Return a list of collection names for the provided chromadb client (best-effort)."""
+def list_collection_names(client) -> dict:
+	"""
+	Return a dict: {'status': str, 'collections': list, 'error': str or None}
+	"""
 	try:
 		if hasattr(client, "list_collections"):
 			raw = client.list_collections()
-			return _normalize_list_collections_result(raw)
-		# Some clients may expose collections via attribute
+			names = _normalize_list_collections_result(raw)
+			return {'status': ChromaDBStatus.COLLECTION_LISTED.value, 'collections': names, 'error': None}
 		if hasattr(client, "collections"):
 			raw = getattr(client, "collections")
-			return _normalize_list_collections_result(raw)
-	except Exception:
-		pass
-	return []
+			names = _normalize_list_collections_result(raw)
+			return {'status': ChromaDBStatus.COLLECTION_LISTED.value, 'collections': names, 'error': None}
+	except Exception as e:
+		return {'status': ChromaDBStatus.ERROR.value, 'collections': [], 'error': str(e)}
+	return {'status': ChromaDBStatus.COLLECTION_LISTED.value, 'collections': [], 'error': None}

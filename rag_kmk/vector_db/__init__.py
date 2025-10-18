@@ -1,4 +1,4 @@
-from .database import create_chroma_client, summarize_collection
+from .database import summarize_collection
 
 # Re-export query helpers so `from rag_kmk.vector_db import retrieve_chunks` works.
 # Import inside try/except to avoid import-time crashes when query has issues.
@@ -9,4 +9,4 @@ except Exception:
     show_results = None
 
 
-__all__ = ['create_chroma_client', 'summarize_collection', 'retrieve_chunks', 'show_results']
+__all__ = ['summarize_collection', 'retrieve_chunks', 'show_results']
