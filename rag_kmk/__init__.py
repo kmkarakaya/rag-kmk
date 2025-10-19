@@ -6,7 +6,7 @@ Provide a lazy factory for rag_client to prevent import-time side effects.
 
 __author__ = "Murat Karakaya"
 __email__ = "kmkarakaya@gmail.com"
-__version__ = "0.0.54"
+__version__ = "0.0.55"
 
 from .config.config import CONFIG
 
