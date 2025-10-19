@@ -37,9 +37,11 @@ def create_chromadb_client(chromaDB_path: str = None):
 	Returns a dict: {'status': str, 'client': client or None, 'error': str or None}
 	"""
 	if chromaDB_path is None:
+		# CONFIG may be None during tests or early import; guard accordingly
+		cfg = CONFIG or {}
 		chromaDB_path = (
-			CONFIG.get('vector_db', {}).get('chromaDB_path')
-			or CONFIG.get('llm', {}).get('chromaDB_path')
+			cfg.get('vector_db', {}).get('chromaDB_path')
+			or cfg.get('llm', {}).get('chromaDB_path')
 		)
 	if chromaDB_path is None or not isinstance(chromaDB_path, str) or not chromaDB_path.strip():
 		log.error("Persistent chromaDB_path is required; invalid value provided.")
