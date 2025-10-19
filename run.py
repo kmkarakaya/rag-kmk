@@ -13,13 +13,14 @@ from rag_kmk import CONFIG
 from rag_kmk.knowledge_base import document_loader as kb_loader
 import rag_kmk.chat_flow as chat_flow
 from rag_kmk.vector_db.database import (
+    ChromaDBStatus,
     create_chromadb_client,
     create_collection,
     load_collection,
     list_collection_names,
     summarize_collection,
-    ChromaDBStatus,
-    get_client_for_collection,
+    delete_collection,
+    # get_client_for_collection,  # REMOVE: no longer needed
 )
 
 import json
@@ -96,18 +97,23 @@ invalid_client_result = create_chromadb_client("invalid/path/<>")
 print("❌ Example invalid client creation:", json.dumps(
     {k: v for k, v in invalid_client_result.items() if k != 'client'}, indent=2))
 
-# Example: Use get_client_for_collection
-if loaded_collection is not None:
-    found_client = get_client_for_collection(loaded_collection)
-    print("🔎 get_client_for_collection result:",
-          "Found client" if found_client is not None else "No client found")
-
 # Example: Use summarize_collection directly with error handling
 summary_result = summarize_collection(loaded_collection)
-if summary_result['status'] == 'OK':
+if summary_result['status'] == ChromaDBStatus.SUMMARY_READY.value:
     print("📊 Collection summary (direct):", json.dumps(summary_result, indent=2))
 else:
     print("⚠️ Could not summarize collection:", summary_result['error'])
+
+# Example: Delete a collection (demonstrate delete_collection)
+collections_result = list_collection_names(client)
+collection_name = collections_result['collections'][0] if collections_result['collections'] else "non_existent_collection"
+print(f"Selected collection for deletion: {collection_name}")
+delete_result = delete_collection(client, collection_name)
+print(f"🗑️ Delete collection '{collection_name}' result:", json.dumps(delete_result, indent=2))
+if delete_result['success']:
+    print(f"✅ Collection '{collection_name}' deleted successfully.")
+else:
+    print(f"⚠️ Failed to delete collection '{collection_name}': {delete_result.get('error')}")
 
 # end of minimal run.py
 

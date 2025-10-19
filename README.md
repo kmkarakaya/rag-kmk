@@ -83,6 +83,98 @@ finally:
     client.close()
 ```
 
+## Vector DB API (ChromaDB) — Consistent Client-based Usage
+
+All vector DB operations now **require an explicit ChromaDB client parameter** for clarity and efficiency.  
+You must first create a client, then pass it to all DB functions.
+
+```python
+from rag_kmk.vector_db.database import (
+    create_chromadb_client,
+    create_collection,
+    load_collection,
+    list_collection_names,
+    summarize_collection,
+    delete_collection,
+    ChromaDBStatus,
+)
+
+# 1. Create/load persistent ChromaDB client
+client_result = create_chromadb_client()
+if client_result['client'] is None:
+    raise RuntimeError(client_result['error'])
+client = client_result['client']
+
+# 2. List all collections
+collections_result = list_collection_names(client)
+print(collections_result)
+
+# 3. Create a new collection
+create_result, created_collection = create_collection(client, "my_collection")
+print(create_result)
+
+# 4. Load a collection
+load_result, loaded_collection = load_collection(client, "my_collection")
+print(load_result)
+
+# 5. Summarize a collection
+if loaded_collection:
+    summary = summarize_collection(loaded_collection)
+    print(summary)
+
+# 6. Delete a collection
+delete_result = delete_collection(client, "my_collection")
+print(delete_result)
+```
+
+## Example: Minimal `run.py`
+
+```python
+from rag_kmk import CONFIG
+from rag_kmk.vector_db.database import (
+    create_chromadb_client,
+    create_collection,
+    load_collection,
+    list_collection_names,
+    summarize_collection,
+    delete_collection,
+    ChromaDBStatus,
+)
+import json
+
+# Update config if needed
+CONFIG['llm']['model'] = 'gemini-2.5-flash'
+
+# Create/load client
+client_result = create_chromadb_client()
+if client_result['client'] is None:
+    print(client_result['error'])
+    exit(1)
+client = client_result['client']
+
+# List collections
+collections_result = list_collection_names(client)
+print(json.dumps(collections_result, indent=2))
+
+# Create collection
+collection_name = "my_new_collection"
+create_result, created_collection = create_collection(client, collection_name)
+print(json.dumps(create_result, indent=2))
+
+# Load collection
+load_result, loaded_collection = load_collection(client, collection_name)
+print(json.dumps(load_result, indent=2))
+
+# Summarize collection
+if loaded_collection:
+    summary_result = summarize_collection(loaded_collection)
+    print(json.dumps(summary_result, indent=2))
+
+# Delete collection
+delete_result = delete_collection(client, collection_name)
+print(json.dumps(delete_result, indent=2))
+```
+
 ## Configuration
 
 Important config keys (see `rag_kmk/config/config.yaml`):
@@ -116,12 +208,20 @@ Primary helpers and their key parameters (one-line):
 - rag_kmk.knowledge_base.document_loader.load_knowledge_base(collection_name: str, cfg: Optional[dict]=None)
   -> (collection or None, ChromaDBStatus)
   - Open-only helper (does not create directories).
-- rag_kmk.vector_db.database.create_chroma_client(collection_name='default', chromaDB_path=None, create_new=True, config=None)
-  -> (client, collection, ChromaDBStatus)
-- rag_kmk.vector_db.database.ChromaDBStatus
-  - Enum-like statuses (OK, NEW_PERSISTENT_CREATED, MISSING_PERSISTENT, ALREADY_EXISTS, ERROR, ...)
+- rag_kmk.vector_db.database.create_chromadb_client(chromaDB_path=None)
+  -> {'status': str, 'client': client or None, 'error': str or None}
+- rag_kmk.vector_db.database.create_collection(client, collection_name)
+  -> (result_dict, collection or None)
+- rag_kmk.vector_db.database.load_collection(client, collection_name)
+  -> (result_dict, collection or None)
+- rag_kmk.vector_db.database.list_collection_names(client)
+  -> {'status': str, 'collections': list, 'error': str or None}
 - rag_kmk.vector_db.database.summarize_collection(chroma_collection)
-  - Best-effort print + return of a JSON summary for a collection.
+  -> {'status': str, 'summary': dict, 'error': str or None}
+- rag_kmk.vector_db.database.delete_collection(client, collection_name)
+  -> {'status': str, 'success': bool, 'error': str or None}
+- rag_kmk.vector_db.database.ChromaDBStatus
+  - Enum-like statuses (CLIENT_READY, COLLECTION_CREATED, COLLECTION_LOADED, COLLECTION_LISTED, SUMMARY_READY, etc.)
 - rag_kmk.chat_flow.llm_interface.build_chatBot(config: Optional[dict]=None) -> ChatClient
   - Lazily builds an LLM-backed ChatClient or returns a no-op client when SDK/creds missing.
 - rag_kmk.chat_flow.llm_interface.generate_LLM_answer(client, prompt: str, timeout_seconds: int=30, **opts) -> str
@@ -145,7 +245,6 @@ Path resolution precedence used by `build_knowledge_base()`:
 - Notes on persistence behavior (persistent-only):
 - The library requires a filesystem path for persistent ChromaDB. Pass a directory to `chromaDB_path` or configure `vector_db.chromaDB_path` in the config.
 - Supplying a filesystem path forces persistent storage; `build_knowledge_base` will create the path if needed.
-- There is no `force_persistence` boolean parameter in the current API; control persistence explicitly via `chromaDB_path` or by using `create_chroma_client(..., create_new=True/False)`.
 
 ## Development & testing
 
@@ -172,7 +271,8 @@ scripts\run_coverage.bat
 
 ## What's new (changelog fragment)
 
-- README updated to reflect actual current APIs: use `initialize_rag()` / `build_knowledge_base()` signatures from source.
+- All vector DB operations now require an explicit client parameter for clarity and efficiency.
+- README and run.py updated to reflect the new API.
 - Clarified persistence resolution (explicit arg > config > default) and removed references to a non-existent `force_persistence` parameter.
 
 ---

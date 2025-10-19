@@ -17,7 +17,10 @@ class ChromaDBStatus(Enum):
 	NEW_PERSISTENT_CREATED = "NEW_PERSISTENT_CREATED"
 	MISSING_PERSISTENT = "MISSING_PERSISTENT"
 	MISSING_COLLECTION = "MISSING_COLLECTION"
-	ALREADY_EXISTS = "ALREADY_EXISTS"   # returned when create_new=True but collection already exists
+	ALREADY_EXISTS = "ALREADY_EXISTS"
+	COLLECTION_DELETED = "COLLECTION_DELETED"
+	COLLECTION_DELETE_MISSING = "COLLECTION_DELETE_MISSING"
+	COLLECTION_DELETE_ERROR = "COLLECTION_DELETE_ERROR"
 	ERROR = "ERROR"
 
 # registry to map collection name -> client for helper lookup
@@ -55,7 +58,7 @@ def create_chromadb_client(chromaDB_path: str = None):
 		except Exception:
 			Settings = None
 	except Exception as e:
-		log.exception("chromadb library is required but not installed: %s", e)
+		log.error("chromadb library is required but not installed: %s", e)
 		return {
 			'status': ChromaDBStatus.ERROR.value,
 			'client': None,
@@ -83,7 +86,7 @@ def create_chromadb_client(chromaDB_path: str = None):
 			settings = Settings(chroma_db_impl="duckdb+parquet", persist_directory=abs_path)
 			client = chromadb.Client(settings=settings)
 	except Exception as e:
-		log.exception("Failed to construct chromadb client at %r: %s", abs_path, e)
+		log.error("Failed to construct chromadb client at %r: %s", abs_path, e)
 		return {
 			'status': ChromaDBStatus.ERROR.value,
 			'client': None,
@@ -274,3 +277,37 @@ def list_collection_names(client) -> dict:
 	except Exception as e:
 		return {'status': ChromaDBStatus.ERROR.value, 'collections': [], 'error': str(e)}
 	return {'status': ChromaDBStatus.COLLECTION_LISTED.value, 'collections': [], 'error': None}
+
+def delete_collection(
+	client,
+	collection_name: str
+) -> dict:
+	"""
+	Remove a persistent ChromaDB collection from the database.
+	Also removes any in-memory handles.
+	Returns a dict: {'status': str, 'success': bool, 'error': str or None}
+	"""
+	# Remove from ChromaDB
+	try:
+		if hasattr(client, "delete_collection"):
+			client.delete_collection(name=collection_name)
+		else:
+			log.warning("delete_collection: Client does not support delete_collection().")
+	except Exception as e:
+		log.warning(f"delete_collection: Could not delete collection '{collection_name}' from client: {e}")
+		return {
+			'status': ChromaDBStatus.COLLECTION_DELETE_ERROR.value,
+			'success': False,
+			'error': f"Failed to delete collection from database: {e}"
+		}
+
+	# Remove in-memory handle
+	_COLLECTION_CLIENTS.pop(collection_name, None)
+
+	return {
+		'status': ChromaDBStatus.COLLECTION_DELETED.value,
+		'success': True,
+		'error': None
+	}
+
+
