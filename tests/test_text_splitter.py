@@ -2,7 +2,6 @@ import pytest
 
 from rag_kmk.knowledge_base.text_splitter import (
     convert_Pages_ChunkinChar,
-    convert_Chunk_Token,
     add_meta_data,
 )
 

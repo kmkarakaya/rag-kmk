@@ -1,3 +1,4 @@
+"""PRUNED: tests package now contains only integration tests."""
 """Unit test package for rag_kmk."""
 import os
 import sys

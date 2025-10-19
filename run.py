@@ -10,111 +10,101 @@ All such changes must be made in the library code itself.
 # pip cache purge
 # pip install --no-cache-dir --upgrade rag-kmk
 from rag_kmk import CONFIG
-from rag_kmk.knowledge_base import document_loader as kb_loader
-import rag_kmk.chat_flow as chat_flow
-from rag_kmk.vector_db.database import (
-    ChromaDBStatus,
-    create_chromadb_client,
-    create_collection,
-    load_collection,
-    list_collection_names,
-    summarize_collection,
-    delete_collection,
-    # get_client_for_collection,  # REMOVE: no longer needed
-)
-
 import json
 
-print("--------------------- ORIGINAL CONFIG ---------------------\n", CONFIG['llm'])
+# Ensure CONFIG is populated (some workflows populate CONFIG lazily)
+if not isinstance(CONFIG, dict):
+	import rag_kmk as _rag_mod
+	try:
+		from rag_kmk.config import config as _cfg_mod
+		_loaded = _cfg_mod.load_config(None)
+		# update package-level CONFIG and local binding
+		_rag_mod.CONFIG = _loaded
+		CONFIG = _rag_mod.CONFIG
+	except Exception:
+		# best-effort fallback: ensure CONFIG is at least an empty dict to avoid TypeError
+		_rag_mod.CONFIG = {}
+		CONFIG = _rag_mod.CONFIG
+
+# Import rag_client only after CONFIG is ready
+from rag_kmk import rag_client
+
+print("--------------------- ORIGINAL CONFIG ---------------------\n", CONFIG.get('llm'))
 # Only update the LLM model; all other config values remain as in config.yaml
 CONFIG['llm']['model'] = 'gemini-2.5-flash'
 print("--------------------- AFTER CONFIG UPDATE ---------------------\n", CONFIG['llm'])
 print("-----------------"*4)
-# Set your persistent ChromaDB path
-#chromaDB_path = 'path/to/chromadb'  # replace with your actual path
 
-# 1) Create/load persistent ChromaDB client
-client_result = create_chromadb_client()
-print("📢 ChromaDB client status:", client_result['status'])
-if client_result['client'] is None:
-    print("🚩 Failed to create/load ChromaDB client.", client_result.get('error'))
-    exit(1)
-client = client_result['client']
+rag = rag_client()
 
-# 2) List all collections in the persistent ChromaDB
-collections_result = list_collection_names(client)
-print("📦Collections in ChromaDB:", json.dumps(collections_result, indent=2))
+# 1) List all collections
+print("📦 Collections in ChromaDB:", json.dumps(rag.list_collections(), indent=2))
 
-# 3) Try to create a new collection
-collection_name = "my_new_collection"
-create_result, created_collection = create_collection(client, collection_name)
+collection_name = "my_new_collectionX"
+# 7) Delete the collection
+print(f"🗑️ Delete collection '{collection_name}' result:", json.dumps(
+    rag.delete_collection(collection_name), indent=2))
+
+# 2) Create a new collection
+
 print(f"ℹ️ Create collection '{collection_name}' result:", json.dumps(
-    create_result, indent=2))
+    rag.create_collection(collection_name), indent=2))
 
-if created_collection is not None:
-    print(f"👍Created collection: {collection_name}")
-else:
-    print(f"🚩Collection '{collection_name}' already exists or error. {create_result.get('error')}")
+# 3) Add documents to collection (uncomment and adjust doc_path as needed)
+# doc_path = "tests/sample_documents"
+# print(f"➕ Add documents to '{collection_name}':", json.dumps(
+#     rag.add_doc(collection_name, doc_path=doc_path), indent=2))
 
-# 4) Try to load the collection (should succeed if just created or already exists)
-collection_load_result, loaded_collection = load_collection(client, collection_name)
-if loaded_collection is not None:
-    print(f"👍Loaded collection: {collection_name}")
-    print("--------------------- CHROMADB SUMMARY ---------------------\n")
-    summary_result = summarize_collection(loaded_collection)
-    print(json.dumps(summary_result, indent=2))
-else:
-    print(collection_load_result['error'])
+# 4) Load the collection
+print(f"ℹ️ Load collection '{collection_name}' result:", json.dumps(
+    rag.load_collection(collection_name), indent=2))
 
-# 5) Try to load a non-existent collection
-nonexist_result, nonexist_collection = load_collection(client, "does_not_exist")
-print("ℹ️ Load non-existent collection result:", json.dumps(
-    nonexist_result, indent=2))
-if nonexist_collection is None:
-    print("👍Correctly handled missing collection.")
+# 5) Summarize the collection
+print("--------------------- COLLECTION SUMMARY BEFORE ADDING DOCUMENTS ---------------------\n")
+print(json.dumps(rag.summarize_collection(collection_name), indent=2))
 
-# 6) List collections again to verify
-collections_result = list_collection_names(client)
-print("Collections in ChromaDB after operations:", json.dumps(collections_result, indent=2))
+# 6) Add documents to collection (uncomment and adjust doc_path as needed)
+doc_path = "tests/sample_documents"
+rag.add_doc(collection_name, doc_path=doc_path)
+print("--------------------- COLLECTION SUMMARY AFTER ADDING DOCUMENTS ---------------------\n")
+print(json.dumps(rag.summarize_collection(collection_name), indent=2))
 
-# 7) (Optional) Run RAG pipeline if collection loaded
-if loaded_collection is not None:
-    print("--------------------- RUN RAG PIPELINE ---------------------\n")
-    chat_client = chat_flow.build_chatBot(CONFIG.get('llm', {}))
-    try:
-        chat_flow.run_rag_pipeline(chat_client, loaded_collection)
-    finally:
-        try:
-            chat_client.close()
-        except Exception:
-            pass
-else:
-    print("🚩No valid collection loaded for RAG pipeline.")
 
+# 6) Chat with the collection (uncomment to use)
+prompt = "KDV hakkında verilen cevap nedir?"
+print(f"💬 Chat result:", json.dumps(
+    rag.chat(collection_name, prompt=prompt), indent=2))
+
+prompt = "bu sohbetin başında sana ne sordum?"
+print(f"💬 Chat result:", json.dumps(
+    rag.chat(collection_name, prompt=prompt), indent=2))
+
+
+
+# 8) Build knowledge base (uncomment and adjust as needed)
+# print("🏗️ Build knowledge base:", json.dumps(
+#     rag.build_knowledge_base(collection_name, document_directory_path=doc_path, add_documents=True), indent=2))
+
+# 9) Load knowledge base (uncomment and adjust as needed)
+# print("📚 Load knowledge base:", json.dumps(
+#     rag.load_knowledge_base(collection_name), indent=2))
+
+# 10) Mask config for safe logging
+# print("🔒 Masked config:", json.dumps(rag.mask_config(), indent=2))
+
+# 11) Reload config (demonstrate config reload)
+# print("🔄 Reload config:", json.dumps(rag.reload_config(), indent=2))
+
+# 12) Generate LLM answer directly (uncomment to use)
+# print("🤖 LLM answer:", json.dumps(
+#     rag.generate_llm_answer("Summarize the collection."), indent=2))
+
+# 13) Run RAG pipeline (uncomment to use)
+# print("🚀 Run RAG pipeline:", json.dumps(
+#     rag.run_rag_pipeline(collection_name, non_interactive=True), indent=2))
+
+# Clean up
+rag.close()
 print("-----------------"*4)
-# Example: Try to create a client with an invalid path
-invalid_client_result = create_chromadb_client("invalid/path/<>")
-print("❌ Example invalid client creation:", json.dumps(
-    {k: v for k, v in invalid_client_result.items() if k != 'client'}, indent=2))
-
-# Example: Use summarize_collection directly with error handling
-summary_result = summarize_collection(loaded_collection)
-if summary_result['status'] == ChromaDBStatus.SUMMARY_READY.value:
-    print("📊 Collection summary (direct):", json.dumps(summary_result, indent=2))
-else:
-    print("⚠️ Could not summarize collection:", summary_result['error'])
-
-# Example: Delete a collection (demonstrate delete_collection)
-collections_result = list_collection_names(client)
-collection_name = collections_result['collections'][0] if collections_result['collections'] else "non_existent_collection"
-print(f"Selected collection for deletion: {collection_name}")
-delete_result = delete_collection(client, collection_name)
-print(f"🗑️ Delete collection '{collection_name}' result:", json.dumps(delete_result, indent=2))
-if delete_result['success']:
-    print(f"✅ Collection '{collection_name}' deleted successfully.")
-else:
-    print(f"⚠️ Failed to delete collection '{collection_name}': {delete_result.get('error')}")
-
-# end of minimal run.py
 
 

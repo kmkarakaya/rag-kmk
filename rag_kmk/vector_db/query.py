@@ -31,23 +31,25 @@ def retrieve_chunks(chroma_collection, query, n_results=5,
     if return_only_docs:
         docs = results.get("documents", [[]])[0]
         if len(docs) == 0:
-            print("No results found.")
+            # print("No results found.")
             return []
 
-        for i, doc in enumerate(docs):
-            print(f"Document {i+1}:")
-            print("\tDocument Text: ")
-            print(doc)
-            try:
-                src = results["metadatas"][0][i].get("document")
-            except Exception:
-                src = None
-            print(f"\tDocument Source: {src}")
-            try:
-                dist = results["distances"][0][i]
-            except Exception:
-                dist = None
-            print(f"\tDocument Distance: {dist}")
+        # Suppress verbose printing of document contents; callers can use
+        # the returned list for inspection or logging as needed.
+        # for i, doc in enumerate(docs):
+        #     print(f"Document {i+1}:")
+        #     print("\tDocument Text: ")
+        #     print(doc)
+        #     try:
+        #         src = results["metadatas"][0][i].get("document")
+        #     except Exception:
+        #         src = None
+        #     print(f"\tDocument Source: {src}")
+        #     try:
+        #         dist = results["distances"][0][i]
+        #     except Exception:
+        #         dist = None
+        #     print(f"\tDocument Distance: {dist}")
 
         return docs
 
@@ -63,12 +65,13 @@ def show_results(results, return_only_docs=False):
     if return_only_docs:
         retrieved_documents = results
         if not retrieved_documents:
-            print("No results found.")
+            # print("No results found.")
             return
-        for i, doc in enumerate(retrieved_documents):
-            print(f"Document {i+1}:")
-            print("\tDocument Text: ")
-            print(doc)
+        # Suppress verbose printing of retrieved documents.
+        # for i, doc in enumerate(retrieved_documents):
+        #     print(f"Document {i+1}:")
+        #     print("\tDocument Text: ")
+        #     print(doc)
         return
 
     retrieved_documents = results.get("documents", [[]])[0]
@@ -78,24 +81,25 @@ def show_results(results, return_only_docs=False):
 
     retrieved_documents_metadata = results.get("metadatas", [[]])[0]
     retrieved_documents_distances = results.get("distances", [[]])[0]
-    print("------- retrieved documents -------\n")
-
-    for i, doc in enumerate(retrieved_documents):
-        print(f"Document {i+1}:")
-        print("\tDocument Text: ")
-        print(doc)
-        try:
-            src = retrieved_documents_metadata[i].get("document")
-        except Exception:
-            src = None
-        try:
-            cat = retrieved_documents_metadata[i].get("category")
-        except Exception:
-            cat = None
-        try:
-            dist = retrieved_documents_distances[i]
-        except Exception:
-            dist = None
-        print(f"\tDocument Source: {src}")
-        print(f"\tDocument Source Type: {cat}")
-        print(f"\tDocument Distance: {dist}")
+    # Suppress verbose printing of retrieved documents; callers can inspect
+    # and log details as needed.
+    # print("------- retrieved documents -------\n")
+    # for i, doc in enumerate(retrieved_documents):
+    #     print(f"Document {i+1}:")
+    #     print("\tDocument Text: ")
+    #     print(doc)
+    #     try:
+    #         src = retrieved_documents_metadata[i].get("document")
+    #     except Exception:
+    #         src = None
+    #     try:
+    #         cat = retrieved_documents_metadata[i].get("category")
+    #     except Exception:
+    #         cat = None
+    #     try:
+    #         dist = retrieved_documents_distances[i]
+    #     except Exception:
+    #         dist = None
+    #     print(f"\tDocument Source: {src}")
+    #     print(f"\tDocument Source Type: {cat}")
+    #     print(f"\tDocument Distance: {dist}")

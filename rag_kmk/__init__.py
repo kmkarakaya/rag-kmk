@@ -1,32 +1,25 @@
 """Top-level package for rag-kmk.
 
-This module intentionally avoids performing any network calls or reading
-environment files at import time. Call `initialize_rag()` to load configuration
-explicitly at runtime.
+Avoid importing heavy or application-specific modules at import time.
+Provide a lazy factory for rag_client to prevent import-time side effects.
 """
 
 __author__ = "Murat Karakaya"
 __email__ = "kmkarakaya@gmail.com"
 __version__ = "0.0.54"
 
-from .config.config import load_config, mask_config
+from .config.config import CONFIG
 
-# Do NOT load configuration or build network clients at import time. Provide an
-# explicit initializer that callers can use to load or override configuration.
-def initialize_rag(custom_config_path=None):
-    """Load and return configuration from the repository or a custom path.
 
-    This function is intentionally side-effect free (it returns the config
-    dict). Callers who need a module-level `CONFIG` may assign the returned
-    value to `rag_kmk.CONFIG` explicitly.
+def rag_client(*args, **kwargs):
+    """Lazy factory that returns an instance of the rag_client.
+
+    Call as: from rag_kmk import rag_client
+             rag = rag_client(...)  # this imports the real class lazily
     """
-    return load_config(custom_config_path)
+    # Import here to avoid import-time side effects and circular imports
+    from .rag_client import rag_client as _RagClient
 
-# Backwards-compatible behavior: try to populate CONFIG at import time from the
-# repository config file. Wrap in try/except to avoid hard failures on import.
-try:
-    CONFIG = load_config()
-except Exception:
-    CONFIG = {}
+    return _RagClient(*args, **kwargs)
 
-__all__ = ["initialize_rag", "CONFIG", "load_config", "mask_config"]
+__all__ = ["CONFIG", "rag_client"]

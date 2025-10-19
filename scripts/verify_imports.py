@@ -1,5 +1,8 @@
 import importlib
+import logging
 import sys
+
+log = logging.getLogger(__name__)
 
 modules = [
     ("numpy", "numpy"),
@@ -31,7 +34,7 @@ for pkg_name, mod_name in modules:
 
 max_name_len = max(len(k) for k in results.keys())
 for pkg, res in results.items():
-    print(f"{pkg.ljust(max_name_len)} : {res}")
+    log.info(f"{pkg.ljust(max_name_len)} : {res}")
 
 # exit with non-zero if any errors
 if any(not r.startswith("OK") for r in results.values()):

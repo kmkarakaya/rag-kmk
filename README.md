@@ -22,65 +22,33 @@ cd rag-kmk
 pip install -e .
 ```
 
-## Quick start — minimal examples
+## Quick start — unified rag_client interface
 
-Keep examples short (<= 20 lines). Use environment variables for API keys.
-
-1) Load configuration explicitly (recommended):
 ```python
-from rag_kmk import initialize_rag, CONFIG
+from rag_kmk import rag_client
 
-# load default config file and get the config dict
-cfg = initialize_rag()
-# or use the module-level CONFIG (may be empty if loading failed at import time)
-print(CONFIG.get('llm'))
-```
+rag = rag_client()  # Optionally: rag_client(config_path="path/to/config.yaml")
 
-2) Create a persistent collection and ingest documents:
-```python
-from rag_kmk.knowledge_base import build_knowledge_base
+# List collections
+print(rag.list_collections())
 
-kb, status = build_knowledge_base(
-  collection_name='my_collection',
-  document_directory_path=r'tests\sample_documents',
-  add_documents=True,
-)
-print(status)
-```
+# Create a collection
+print(rag.create_collection("my_collection"))
 
-3) Open an existing persistent collection (open-only semantics):
-```python
-from rag_kmk.knowledge_base import load_knowledge_base
+# Add documents to a collection
+print(rag.add_doc("my_collection", doc_path="tests/sample_documents"))
 
-kb, status = load_knowledge_base('my_collection')
-print(status)
-```
+# Summarize a collection
+print(rag.summarize_collection("my_collection"))
 
-4) Create an ephemeral (directory-backed) collection for tests (use a temporary directory):
-```python
-from rag_kmk.knowledge_base import build_knowledge_base
-import tempfile
+# Chat with the collection
+print(rag.chat("my_collection", prompt="What is this document about?"))
 
-with tempfile.TemporaryDirectory() as td:
-    kb, status = build_knowledge_base(
-      collection_name='tmp',
-      document_directory_path=r'tests\sample_documents',
-      add_documents=True,
-      chromaDB_path=td,  # use a temporary filesystem directory for this run (ephemeral)
-    )
-    print(status)
-# data removed when the temp dir is deleted
-```
+# Delete a collection
+print(rag.delete_collection("my_collection"))
 
-5) Build a ChatClient and run the simple pipeline (see `run.py` for a canonical example):
-```python
-from rag_kmk.chat_flow.llm_interface import build_chatBot, run_rag_pipeline
-
-client = build_chatBot(CONFIG.get('llm', {}))
-try:
-    run_rag_pipeline(client, kb, non_interactive=True)
-finally:
-    client.close()
+# Clean up
+rag.close()
 ```
 
 ## Vector DB API (ChromaDB) — Consistent Client-based Usage
@@ -268,6 +236,32 @@ scripts\run_coverage.bat
 - If the LLM SDK or credentials are missing the library returns a no-op ChatClient so non-LLM parts of the pipeline continue to work.
 - `generate_LLM_answer()` enforces a timeout (default 30s) and raises a RuntimeError on timeout.
 - When debugging auth or model issues, print `rag_kmk.config.config.mask_config(config)` rather than the raw config to avoid leaking secrets.
+
+## Logging
+
+The library uses Python's standard `logging` module. By default the package is non-invasive (it will not configure the global logging handlers so host applications remain in control).
+
+- To enable file+console logging for development, set the environment variable `RAG_KMK_AUTOLOG=1` before running your application. The library will read `CONFIG['logging']` (see `config.yaml`) and create a rotating file at the configured path (default `logs/rag_kmk.log`) as well as stream logs to the console.
+- You can also programmatically initialize logging from your application using the helper `rag_kmk.logging_setup.init_logging_from_config(config, force=False)`.
+
+PowerShell example to run the sample runner with logging enabled:
+
+```powershell
+$env:RAG_KMK_AUTOLOG = "1"
+python run.py
+```
+
+Or programmatically (no env var):
+
+```powershell
+python - <<'PY'
+import rag_kmk.logging_setup as ls
+ls.init_logging_from_config(None, force=True)
+import run
+PY
+```
+
+Log file location and rotation are configurable via `CONFIG['logging']` keys: `file`, `level`, `max_bytes`, and `backup_count`.
 
 ## What's new (changelog fragment)
 

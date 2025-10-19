@@ -1,3 +1,8 @@
+"""vector_db package for rag_kmk.
+
+Keep top-level import minimal to avoid loading chromadb (heavy) on import.
+"""
+
 from .database import summarize_collection
 
 # Re-export query helpers so `from rag_kmk.vector_db import retrieve_chunks` works.
@@ -8,5 +13,7 @@ except Exception:
     retrieve_chunks = None
     show_results = None
 
-
-__all__ = ['summarize_collection', 'retrieve_chunks', 'show_results']
+# Do not expose anything publicly
+# If you want to allow internal imports, you can do:
+# from . import database
+__all__ = []

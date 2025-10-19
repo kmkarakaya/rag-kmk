@@ -15,6 +15,9 @@ class ChromaDBStatus(Enum):
 	COLLECTION_LISTED = "COLLECTION_LISTED"
 	SUMMARY_READY = "SUMMARY_READY"
 	NEW_PERSISTENT_CREATED = "NEW_PERSISTENT_CREATED"
+	# Backwards-compatible aliases
+	EXISTING_PERSISTENT = "EXISTING_PERSISTENT"
+	OK = "OK"
 	MISSING_PERSISTENT = "MISSING_PERSISTENT"
 	MISSING_COLLECTION = "MISSING_COLLECTION"
 	ALREADY_EXISTS = "ALREADY_EXISTS"
@@ -51,6 +54,9 @@ def create_chromadb_client(chromaDB_path: str = None):
 		}
 
 	abs_path = os.path.abspath(chromaDB_path)
+	# Debug print suppressed; use logging instead when needed
+	# print(f"[rag-kmk] create_chromadb_client: attempting to create/load client at: {abs_path}")
+	log.info("create_chromadb_client: attempting to create/load client at %s", abs_path)
 	try:
 		import chromadb
 		try:
@@ -59,6 +65,7 @@ def create_chromadb_client(chromaDB_path: str = None):
 			Settings = None
 	except Exception as e:
 		log.error("chromadb library is required but not installed: %s", e)
+		# print(f"[rag-kmk] create_chromadb_client: chromadb import failed: {e}")
 		return {
 			'status': ChromaDBStatus.ERROR.value,
 			'client': None,
@@ -87,6 +94,7 @@ def create_chromadb_client(chromaDB_path: str = None):
 			client = chromadb.Client(settings=settings)
 	except Exception as e:
 		log.error("Failed to construct chromadb client at %r: %s", abs_path, e)
+		# print(f"[rag-kmk] create_chromadb_client: failed to construct client at {abs_path}: {e}")
 		return {
 			'status': ChromaDBStatus.ERROR.value,
 			'client': None,
@@ -97,7 +105,40 @@ def create_chromadb_client(chromaDB_path: str = None):
 			)
 		}
 
+	# print(f"[rag-kmk] create_chromadb_client: client created/loaded successfully")
+	log.info("create_chromadb_client: client created/loaded successfully at %s", abs_path)
 	return {'status': ChromaDBStatus.CLIENT_READY.value, 'client': client, 'error': None}
+
+
+# Backwards-compatible factory used by older tests/clients
+def create_chroma_client(chromaDB_path: str = None, collection_name: str = None, create_new: bool = False, config: dict = None):
+	"""Compatibility wrapper that mimics the older return signature: (client, collection, status)
+	It maps to the new `create_chromadb_client` and attempts to open/create the requested collection.
+	"""
+	res = create_chromadb_client(chromaDB_path)
+	client = res.get('client')
+	if client is None:
+		# Map error to status
+		status = ChromaDBStatus.ERROR
+		return None, None, status
+
+	# If collection_name provided, attempt to load or create
+	try:
+		if collection_name:
+			names = list_collection_names(client).get('collections', [])
+			if collection_name in names:
+				_, collection = load_collection(client, collection_name)
+				return client, collection, ChromaDBStatus.OK
+			else:
+				result, collection = create_collection(client, collection_name)
+				if result.get('status') == ChromaDBStatus.COLLECTION_CREATED.value:
+					return client, collection, ChromaDBStatus.NEW_PERSISTENT_CREATED
+				else:
+					return client, collection, ChromaDBStatus.ERROR
+		# no collection requested: return client and OK
+		return client, None, ChromaDBStatus.OK
+	except Exception:
+		return None, None, ChromaDBStatus.ERROR
 
 def create_collection(client, collection_name: str):
 	"""
@@ -106,7 +147,10 @@ def create_collection(client, collection_name: str):
 	"""
 	try:
 		names = list_collection_names(client)['collections']
+		# print(f"[rag-kmk] create_collection: existing collections: {names}")
+		log.info("create_collection: existing collections: %s", names)
 		if collection_name in names:
+			# print(f"[rag-kmk] create_collection: collection already exists: {collection_name}")
 			result = {
 				'status': ChromaDBStatus.ALREADY_EXISTS.value,
 				'error': (
@@ -121,10 +165,13 @@ def create_collection(client, collection_name: str):
 		else:
 			collection = client.create_collection(name=collection_name)
 		_COLLECTION_CLIENTS[collection_name] = client
+		# print(f"[rag-kmk] create_collection: created collection: {collection_name}")
+		log.info("create_collection: created collection: %s", collection_name)
 		result = {'status': ChromaDBStatus.COLLECTION_CREATED.value, 'error': None}
 		return result, collection
 	except Exception as e:
 		log.exception("Failed to create collection %r: %s", collection_name, e)
+		# print(f"[rag-kmk] create_collection: error creating collection {collection_name}: {e}")
 		result = {
 			'status': ChromaDBStatus.ERROR.value,
 			'error': (
@@ -142,7 +189,10 @@ def load_collection(client, collection_name: str):
 	"""
 	try:
 		names = list_collection_names(client)['collections']
+		# print(f"[rag-kmk] load_collection: available collections: {names}")
+		log.info("load_collection: available collections: %s", names)
 		if collection_name not in names:
+			# print(f"[rag-kmk] load_collection: missing collection: {collection_name}")
 			result = {
 				'status': ChromaDBStatus.MISSING_COLLECTION.value,
 				'error': (
@@ -153,10 +203,12 @@ def load_collection(client, collection_name: str):
 			return result, None
 		collection = client.get_collection(collection_name)
 		_COLLECTION_CLIENTS[collection_name] = client
+		# print(f"[rag-kmk] load_collection: loaded collection: {collection_name}")
 		result = {'status': ChromaDBStatus.COLLECTION_LOADED.value, 'error': None}
 		return result, collection
 	except Exception as e:
 		log.debug("Failed to load collection %r: %s", collection_name, e)
+		# print(f"[rag-kmk] load_collection: error loading collection {collection_name}: {e}")
 		result = {
 			'status': ChromaDBStatus.ERROR.value,
 			'error': (
@@ -269,12 +321,15 @@ def list_collection_names(client) -> dict:
 		if hasattr(client, "list_collections"):
 			raw = client.list_collections()
 			names = _normalize_list_collections_result(raw)
+			# print(f"[rag-kmk] list_collection_names: found collections: {names}")
+			log.info("list_collection_names: found collections: %s", names)
 			return {'status': ChromaDBStatus.COLLECTION_LISTED.value, 'collections': names, 'error': None}
 		if hasattr(client, "collections"):
 			raw = getattr(client, "collections")
 			names = _normalize_list_collections_result(raw)
 			return {'status': ChromaDBStatus.COLLECTION_LISTED.value, 'collections': names, 'error': None}
 	except Exception as e:
+		# print(f"[rag-kmk] list_collection_names: error: {e}")
 		return {'status': ChromaDBStatus.ERROR.value, 'collections': [], 'error': str(e)}
 	return {'status': ChromaDBStatus.COLLECTION_LISTED.value, 'collections': [], 'error': None}
 
@@ -290,11 +345,15 @@ def delete_collection(
 	# Remove from ChromaDB
 	try:
 		if hasattr(client, "delete_collection"):
+			# print(f"[rag-kmk] delete_collection: deleting collection {collection_name}")
+			log.info("delete_collection: deleting collection %s", collection_name)
 			client.delete_collection(name=collection_name)
 		else:
+			# print(f"[rag-kmk] delete_collection: client does not support delete_collection()")
 			log.warning("delete_collection: Client does not support delete_collection().")
 	except Exception as e:
 		log.warning(f"delete_collection: Could not delete collection '{collection_name}' from client: {e}")
+		# print(f"[rag-kmk] delete_collection: error while deleting {collection_name}: {e}")
 		return {
 			'status': ChromaDBStatus.COLLECTION_DELETE_ERROR.value,
 			'success': False,
@@ -304,6 +363,8 @@ def delete_collection(
 	# Remove in-memory handle
 	_COLLECTION_CLIENTS.pop(collection_name, None)
 
+	# print(f"[rag-kmk] delete_collection: finished deletion attempt for {collection_name}")
+	log.info("delete_collection: finished deletion attempt for %s", collection_name)
 	return {
 		'status': ChromaDBStatus.COLLECTION_DELETED.value,
 		'success': True,

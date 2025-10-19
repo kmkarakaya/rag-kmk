@@ -1,6 +1,8 @@
 import os
 import logging
 from typing import Optional, Tuple
+import warnings
+import time
 
 import fitz  # PyMuPDF==1.26.5
 from docx.opc.exceptions import PackageNotFoundError
@@ -71,10 +73,11 @@ def _resolve_collection_count(collection) -> int:
 	return 0
 
 
-def load_and_add_documents(chroma_collection, document_directory_path, cfg):
+def load_and_add_documents(chroma_collection, document_directory_path, cfg, **kwargs):
 	"""Scan a directory, split found documents and add them to `chroma_collection`.
 
 	Returns (files_processed: bool, errors: list[str]).
+	Accepts kwargs for future options (e.g. disable_embeddings) but is backwards compatible.
 	"""
 	if cfg is None:
 		cfg = {}
@@ -139,11 +142,44 @@ def load_and_add_documents(chroma_collection, document_directory_path, cfg):
 				log.debug("No content extracted from %s", filename)
 				continue
 
+			# print(f"[rag-kmk][doc_loader] file={filename} - starting page->char split", flush=True)
 			char_chunks = convert_Pages_ChunkinChar(content_parts)
+			# print(f"[rag-kmk][doc_loader] file={filename} - char_chunks={len(char_chunks)}", flush=True)
+
+			# print(f"[rag-kmk][doc_loader] file={filename} - starting tokenization (convert_Chunk_Token)", flush=True)
+			start_token_ts = time.perf_counter()
 			token_chunks = convert_Chunk_Token(char_chunks)
+			token_dur = time.perf_counter() - start_token_ts
+			# print(f"[rag-kmk][doc_loader] file={filename} - token_chunks={len(token_chunks)} tokenization_time={token_dur:.3f}s", flush=True)
 
 			ids, metadatas = add_meta_data(token_chunks, filename, current_id)
-			add_document_to_collection(ids, metadatas, token_chunks, chroma_collection)
+
+			# GUARANTEED PRINT: show handoff to add step (helps locate stall)
+			print(f"[rag-kmk][doc_loader] HANDOFF to add_document_to_collection: file={filename} chunks={len(token_chunks)}", flush=True)
+			# Lightweight debug: single info log before adding (embedding may happen here)
+			disable_emb = bool(kwargs.get('disable_embeddings', False))
+			log.info(
+				"Adding %d chunks to collection %r (filename=%s). disable_embeddings=%s.",
+				len(token_chunks),
+				getattr(chroma_collection, 'name', '<unknown>'),
+				filename,
+				disable_emb,
+			)
+
+			# Perform add (unchanged)
+			try:
+				start_add_ts = time.perf_counter()
+				add_document_to_collection(ids, metadatas, token_chunks, chroma_collection, **kwargs)
+				add_dur = time.perf_counter() - start_add_ts
+				print(f"[rag-kmk][doc_loader] add_document_to_collection completed for {filename} duration={add_dur:.3f}s", flush=True)
+			except Exception as e:
+				log.exception("add_document_to_collection failed for %s: %s", filename, e)
+				error_messages.append(str(e))
+				continue
+
+			# Lightweight debug: log after add completes
+			log.info("Finished adding %d chunks for %s", len(token_chunks), filename)
+
 			files_processed = True
 			current_id += len(token_chunks)
 
@@ -170,115 +206,3 @@ def load_and_add_documents(chroma_collection, document_directory_path, cfg):
 		log.error("No files were processed; errors: %s", error_messages)
 
 	return files_processed, error_messages
-
-
-# New: load_knowledge_base -> open-only helper (keeps behavior simple)
-def load_knowledge_base(collection_name: str, cfg: Optional[dict] = None) -> Tuple[Optional[object], vdb_database.ChromaDBStatus]:
-	"""Open an existing persistent ChromaDB collection. Do NOT create paths or ingest."""
-	if cfg is None:
-		cfg = load_config() or {}
-	if not isinstance(cfg, dict):
-		cfg = {}
-	vcfg = cfg.get("vector_db", {}) if isinstance(cfg, dict) else {}
-
-	resolved = vcfg.get("chromaDB_path")
-	if not isinstance(resolved, str) or not resolved.strip():
-		log.error("load_knowledge_base requires a persistent chromaDB_path in config.")
-		return None, vdb_database.ChromaDBStatus.ERROR
-
-	abs_path = os.path.abspath(resolved)
-	if not os.path.isdir(abs_path):
-		# Open-only: do not create the directory
-		return None, vdb_database.ChromaDBStatus.MISSING_PERSISTENT
-
-	try:
-		ret = vdb_database.create_chroma_client(collection_name=collection_name, chromaDB_path=abs_path, create_new=False, config=cfg)
-	except Exception:
-		log.exception("create_chroma_client failed during load_knowledge_base")
-		return None, vdb_database.ChromaDBStatus.ERROR
-
-	# Normalize return shapes
-	try:
-		if isinstance(ret, tuple) and len(ret) == 3:
-			_, collection, status = ret
-		elif isinstance(ret, tuple) and len(ret) == 2:
-			collection, status = ret
-		else:
-			collection, status = ret
-	except Exception:
-		return None, vdb_database.ChromaDBStatus.ERROR
-
-	if status != vdb_database.ChromaDBStatus.OK:
-		return None, status
-
-	return collection, status
-
-
-# NEW: simplified build_knowledge_base matching run.py usage (no legacy branches)
-def build_knowledge_base(collection_name: str, document_directory_path: Optional[str] = None, add_documents: bool = False, chromaDB_path: Optional[str] = None, cfg: Optional[dict] = None, overwrite: bool = False) -> Tuple[Optional[object], vdb_database.ChromaDBStatus]:
-	"""Create (or open) a persistent ChromaDB collection and optionally ingest documents.
-
-	- collection_name: name of the collection.
-	- document_directory_path: path to documents to ingest.
-	- add_documents: if True, ingest documents from document_directory_path.
-	- chromaDB_path: optional override for storage path; if None, use config or default ./chromaDB.
-	- overwrite: if collection exists and overwrite is False, returns ALREADY_EXISTS.
-	"""
-	# Validate inputs for ingestion
-	if add_documents and not document_directory_path:
-		log.error("add_documents=True but no document_directory_path provided")
-		return None, vdb_database.ChromaDBStatus.ERROR
-
-	# Load config
-	if cfg is None:
-		cfg = load_config() or {}
-	if not isinstance(cfg, dict):
-		cfg = {}
-	vcfg = cfg.get('vector_db', {}) if isinstance(cfg, dict) else {}
-
-	# Resolve chromaDB path: explicit override > config > default
-	resolved = chromaDB_path if chromaDB_path is not None else vcfg.get('chromaDB_path')
-	if not isinstance(resolved, str) or not resolved.strip():
-		resolved = os.path.join(os.getcwd(), "chromaDB")
-		log.info("No chromaDB_path configured; using default: %s", resolved)
-
-	abs_path = os.path.abspath(resolved)
-	# Ensure persistent path exists
-	try:
-		os.makedirs(abs_path, exist_ok=True)
-	except Exception:
-		log.exception("Failed to create chromaDB directory: %s", abs_path)
-		return None, vdb_database.ChromaDBStatus.ERROR
-
-	# Ask DB factory to create/open the collection (create_new=True requests creation)
-	try:
-		ret = vdb_database.create_chroma_client(collection_name=collection_name, chromaDB_path=abs_path, create_new=True, config=cfg)
-	except Exception:
-		log.exception("create_chroma_client failed in build_knowledge_base")
-		return None, vdb_database.ChromaDBStatus.ERROR
-
-	# Normalize return
-	try:
-		if isinstance(ret, tuple) and len(ret) == 3:
-			_, collection, status = ret
-		elif isinstance(ret, tuple) and len(ret) == 2:
-			collection, status = ret
-		else:
-			collection, status = ret
-	except Exception:
-		return None, vdb_database.ChromaDBStatus.ERROR
-
-	# If collection already exists and overwrite not allowed -> ALREADY_EXISTS
-	if status == vdb_database.ChromaDBStatus.ALREADY_EXISTS and not overwrite:
-		log.error("Collection already exists: %s", collection_name)
-		return None, vdb_database.ChromaDBStatus.ALREADY_EXISTS
-
-	# If creation succeeded and ingestion requested -> ingest
-	if add_documents and collection is not None:
-		files_processed, errors = load_and_add_documents(collection, document_directory_path, cfg)
-		if not files_processed:
-			log.error("Ingestion failed or no files processed for %s; errors: %s", document_directory_path, errors)
-			return collection, vdb_database.ChromaDBStatus.ERROR
-
-	# Return collection and its status
-	return collection, status
