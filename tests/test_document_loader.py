@@ -1,7 +1,7 @@
 import os
 from pathlib import Path
 
-from rag_kmk.knowledge_base.document_loader import build_knowledge_base, load_knowledge_base
+from rag_kmk.knowledge_base.document_loader import load_and_add_documents
 from rag_kmk import CONFIG
 
 
@@ -21,9 +21,12 @@ def test_build_knowledge_base_create_and_ingest_real(tmp_path, monkeypatch):
         'llm': {},
     }
 
-    kb, status = build_knowledge_base(collection_name='test_real', document_directory_path=str(docs), add_documents=True, cfg=cfg)
-    assert status is not None
-    assert kb is not None
+    # Create a chroma client/collection using runtime vector db factory
+    from rag_kmk.vector_db import database as vdb_database
+    client, collection, status = vdb_database.create_chroma_client(collection_name='test_real', chromaDB_path=str(persist_dir), create_new=True, config=cfg.get('vector_db'))
+    # Now ingest documents using the loader
+    processed, errors = load_and_add_documents(collection, str(docs), cfg)
+    assert processed or errors == []
 
 
 import os
@@ -69,7 +72,8 @@ def test_build_knowledge_base_open_existing_real(tmp_path):
 
     cfg = {"vector_db": {"chromaDB_path": str(persist_dir)}, "supported_file_types": [".txt"], "knowledge_base": {"tokens_per_chunk": 64}}
 
-    kb, status = load_knowledge_base(collection_name="test_coll", cfg=cfg)
-
-    # When no collection exists, loader should indicate missing collection or OK depending on implementation
-    assert kb is not None or status is not None
+    # Try to open by creating a client without create_new to simulate existing directory
+    from rag_kmk.vector_db import database as vdb_database
+    client, collection, status = vdb_database.create_chroma_client(collection_name='test_coll', chromaDB_path=str(persist_dir), create_new=False, config=cfg.get('vector_db'))
+    # The collection may be missing, but the call should return statuses without throwing
+    assert status is not None
