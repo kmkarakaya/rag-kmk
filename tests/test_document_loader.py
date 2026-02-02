@@ -26,7 +26,8 @@ def test_build_knowledge_base_create_and_ingest_real(tmp_path, monkeypatch):
     client, collection, status = vdb_database.create_chroma_client(collection_name='test_real', chromaDB_path=str(persist_dir), create_new=True, config=cfg.get('vector_db'))
     # Now ingest documents using the loader
     processed, errors = load_and_add_documents(collection, str(docs), cfg)
-    assert processed or errors == []
+    assert processed is True
+    assert errors == []
 
 
 import os

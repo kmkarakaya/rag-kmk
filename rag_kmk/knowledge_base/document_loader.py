@@ -96,7 +96,9 @@ def load_and_add_documents(chroma_collection, document_directory_path, cfg, **kw
 		if not os.path.isfile(file_path):
 			continue
 		_, file_extension = os.path.splitext(filename)
-		if file_extension not in supported_types:
+		file_extension = file_extension.lower()
+		normalized_types = [ext.lower() for ext in supported_types]
+		if file_extension not in normalized_types:
 			log.debug("Skipping unsupported file type: %s", file_path)
 			continue
 
